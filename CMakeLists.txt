@@ -75,9 +75,14 @@ target_link_libraries(${BACKEND_NAME} PUBLIC ${PUBLIC_DEPS})
 
 set(SOURCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 set(HEADERS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/threading")
+list(APPEND HEADERS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 file(GLOB SOURCES ${SOURCE_PATH}/*.c)
-file(GLOB HEADERS ${HEADERS_PATH}/*.h)  
+
+foreach(DIR ${HEADERS_PATH})
+  file(GLOB DIR_HDRS ${HEADERS_PATH}/*.h)  
+  list(APPEND HEADERS ${DIR_HDRS})
+endforeach()
 
 foreach(SRC_FILE ${SOURCES})
   get_filename_component(SRC_FILE_NAME ${SRC_FILE} NAME)
