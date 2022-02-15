@@ -1,0 +1,2 @@
+#!/bin/bash
+cmake -DCMAKE_C_COMPILER=mpicc -DCMAKE_LINKER=mpicc -DQthreads_ROOT=$QTHREADS_INSTALL_PATH -DPartix_ENABLE_QTHREADS=ON
