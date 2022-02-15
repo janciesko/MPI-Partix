@@ -50,7 +50,7 @@
 #define PARTITIONS 8
 #define COUNT 5
 int main(int argc, char *argv[]) {
-  
+
   thread_library_init();
 
   double message[PARTITIONS * COUNT];

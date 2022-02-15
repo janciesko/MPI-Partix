@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) /* same send/recv partitioning */
   }
   MPI_Finalize();
 
-  thread_library_finalize(); 
+  thread_library_finalize();
 
   return 0;
 }

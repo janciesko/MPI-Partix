@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) /* send-side partitioning */
   }
   MPI_Finalize();
 
-  thread_library_finalize (); 
+  thread_library_finalize();
 
   return 0;
 }

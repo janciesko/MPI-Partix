@@ -54,9 +54,7 @@ void thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier);
 void thread_barrier_wait(barrier_handle_t *p_barrier);
 void thread_barrier_destroy(barrier_handle_t *p_barrier);
 void *pthread_func(void *arg);
-void thread_create(void (*f)(void *), void *arg,
-                          thread_handle_t *p_thread);
+void thread_create(void (*f)(void *), void *arg, thread_handle_t *p_thread);
 void thread_join(thread_handle_t *p_thread);
-
 
 #endif /* __PARTIX_THREAD_H__ */

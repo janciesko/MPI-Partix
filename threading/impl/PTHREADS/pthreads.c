@@ -41,60 +41,47 @@
 // ************************************************************************
 //@HEADER
 */
-#include <thread.h>
 #include <pthread.h>
+#include <thread.h>
 
 struct thread_handle_t {
-    pthread_t thread;
-    void (*f)(void *);
-    void *arg;
+  pthread_t thread;
+  void (*f)(void *);
+  void *arg;
 };
 
 struct barrier_handle_t {
-    pthread_barrier_t barrier;
+  pthread_barrier_t barrier;
 };
 
-void thread_library_init(void)
-{
-    ; /* Empty. */
+void thread_library_init(void) { ; /* Empty. */ }
+
+void thread_library_finalize(void) { ; /* Empty. */ }
+
+void thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier) {
+  pthread_barrier_init(&p_barrier->barrier, NULL, num_waiters);
 }
 
-void thread_library_finalize(void)
-{
-    ; /* Empty. */
+void thread_barrier_wait(barrier_handle_t *p_barrier) {
+  pthread_barrier_wait(&p_barrier->barrier);
 }
 
-void thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier)
-{
-    pthread_barrier_init(&p_barrier->barrier, NULL, num_waiters);
+void thread_barrier_destroy(barrier_handle_t *p_barrier) {
+  pthread_barrier_destroy(&p_barrier->barrier);
 }
 
-void thread_barrier_wait(barrier_handle_t *p_barrier)
-{
-    pthread_barrier_wait(&p_barrier->barrier);
+void *pthread_func(void *arg) {
+  thread_handle_t *p_thread = (thread_handle_t *)arg;
+  p_thread->f(p_thread->arg);
+  return NULL;
 }
 
-void thread_barrier_destroy(barrier_handle_t *p_barrier)
-{
-    pthread_barrier_destroy(&p_barrier->barrier);
+void thread_create(void (*f)(void *), void *arg, thread_handle_t *p_thread) {
+  p_thread->f = f;
+  p_thread->arg = arg;
+  pthread_create(&p_thread->thread, NULL, pthread_func, p_thread);
 }
 
-void *pthread_func(void *arg)
-{
-    thread_handle_t *p_thread = (thread_handle_t *)arg;
-    p_thread->f(p_thread->arg);
-    return NULL;
-}
-
-void thread_create(void (*f)(void *), void *arg,
-                          thread_handle_t *p_thread)
-{
-    p_thread->f = f;
-    p_thread->arg = arg;
-    pthread_create(&p_thread->thread, NULL, pthread_func, p_thread);
-}
-
-void thread_join(thread_handle_t *p_thread)
-{
-    pthread_join(p_thread->thread, NULL);
+void thread_join(thread_handle_t *p_thread) {
+  pthread_join(p_thread->thread, NULL);
 }

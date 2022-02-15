@@ -42,53 +42,34 @@
 //@HEADER
 */
 
-#include <thread.h>
 #include <omp.h>
+#include <thread.h>
 
 struct thread_handle_t {
-    pthread_t thread;
-    void (*f)(void *);
-    void *arg;
+  pthread_t thread;
+  void (*f)(void *);
+  void *arg;
 };
 
+static void thread_library_init(void) { ; /* Empty. */ }
 
-static void thread_library_init(void)
-{
-    ; /* Empty. */
+static void thread_library_finalize(void) { ; /* Empty. */ }
+
+static void thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier) {
+  ; /* Empty. */
 }
 
-static void thread_library_finalize(void)
-{
-    ; /* Empty. */
+static void thread_barrier_wait(barrier_handle_t *p_barrier) { ; /* Empty. */ }
+
+static void thread_barrier_destroy(barrier_handle_t *p_barrier) {
+  ; /* Empty. */
 }
 
-static void thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier)
-{
-    ; /* Empty. */
-}
-
-static void thread_barrier_wait(barrier_handle_t *p_barrier)
-{
-    ; /* Empty. */
-}
-
-static void thread_barrier_destroy(barrier_handle_t *p_barrier)
-{
-    ; /* Empty. */
-}
-
-static void *pthread_func(void *arg)
-{
-    ; /* Empty. */
-}
+static void *pthread_func(void *arg) { ; /* Empty. */ }
 
 static void thread_create(void (*f)(void *), void *arg,
-                          thread_handle_t *p_thread)
-{
-    ; /* Empty. */
+                          thread_handle_t *p_thread) {
+  ; /* Empty. */
 }
 
-static void thread_join(thread_handle_t *p_thread)
-{
-    ; /* Empty. */
-}
+static void thread_join(thread_handle_t *p_thread) { ; /* Empty. */ }

@@ -53,7 +53,7 @@
 #define PARTLENGTH 16
 #define MESSAGE_LENGTH PARTITIONS *PARTLENGTH
 int main(int argc, char *argv[]) /* send-side partitioning */
-{ 
+{
 
   thread_library_init();
 

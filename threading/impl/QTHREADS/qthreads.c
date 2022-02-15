@@ -42,46 +42,25 @@
 //@HEADER
 */
 
-#include <thread.h>
 #include <pthread.h>
+#include <thread.h>
 
-void thread_library_init(void)
-{
-    ; /* Empty. */
+void thread_library_init(void) { ; /* Empty. */ }
+
+void thread_library_finalize(void) { ; /* Empty. */ }
+
+void thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier) {
+  ; /* Empty. */
 }
 
-void thread_library_finalize(void)
-{
-    ; /* Empty. */
+void thread_barrier_wait(barrier_handle_t *p_barrier) { ; /* Empty. */ }
+
+void thread_barrier_destroy(barrier_handle_t *p_barrier) { ; /* Empty. */ }
+
+void *pthread_func(void *arg) { ; /* Empty. */ }
+
+void thread_create(void (*f)(void *), void *arg, thread_handle_t *p_thread) {
+  ; /* Empty. */
 }
 
-void thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier)
-{
-    ; /* Empty. */
-}
-
-void thread_barrier_wait(barrier_handle_t *p_barrier)
-{
-    ; /* Empty. */
-}
-
-void thread_barrier_destroy(barrier_handle_t *p_barrier)
-{
-    ; /* Empty. */
-}
-
-void *pthread_func(void *arg)
-{
-    ; /* Empty. */
-}
-
-void thread_create(void (*f)(void *), void *arg,
-                          thread_handle_t *p_thread)
-{
-    ; /* Empty. */
-}
-
-void thread_join(thread_handle_t *p_thread)
-{
-    ; /* Empty. */
-}
+void thread_join(thread_handle_t *p_thread) { ; /* Empty. */ }
