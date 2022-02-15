@@ -4,7 +4,7 @@ find_path(qthreads_headers_found qthread.h PATHS ${Qthreads_ROOT}/include NO_DEF
 
 if (qthreads_lib_found AND qthreads_headers_found)
 message(STATUS "Qthreads found: ${qthreads_lib_found}")
-set_target_properties(QTHREADS PROPERTIES
+set_target_properties(Qthreads PROPERTIES
     INTERFACE_LINK_LIBRARIES ${qthreads_lib_found}
     INTERFACE_INCLUDE_DIRECTORIES ${qthreads_headers_found}
   )
