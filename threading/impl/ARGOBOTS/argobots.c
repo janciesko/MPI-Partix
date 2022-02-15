@@ -70,7 +70,7 @@ struct barrier_handle_t {
     ABT_barrier barrier;
 };
 
-static inline uint32_t xorshift_rand32(uint32_t *p_seed)
+inline uint32_t xorshift_rand32(uint32_t *p_seed)
 {
     /* George Marsaglia, "Xorshift RNGs", Journal of Statistical Software,
      * Articles, 2003 */
@@ -82,12 +82,12 @@ static inline uint32_t xorshift_rand32(uint32_t *p_seed)
     return seed;
 }
 
-static int sched_init(ABT_sched sched, ABT_sched_config config)
+int sched_init(ABT_sched sched, ABT_sched_config config)
 {
     return ABT_SUCCESS;
 }
 
-static void sched_run(ABT_sched sched)
+void sched_run(ABT_sched sched)
 {
     const int work_count_mask_local = 16 - 1;
     const int work_count_mask_remote = 256 - 1;
@@ -165,12 +165,12 @@ static void sched_run(ABT_sched sched)
     free(all_pools);
 }
 
-static int sched_free(ABT_sched sched)
+int sched_free(ABT_sched sched)
 {
     return ABT_SUCCESS;
 }
 
-static void thread_library_init(void)
+void thread_library_init(void)
 {
     int ret;
     ret = ABT_init(0, 0);
@@ -250,7 +250,7 @@ static void thread_library_init(void)
     assert(ret == ABT_SUCCESS);
 }
 
-static void thread_library_finalize(void)
+void thread_library_finalize(void)
 {
     int ret;
     /* Join secondary execution streams. */
@@ -280,28 +280,28 @@ static void thread_library_finalize(void)
     g_abt_global.scheds = NULL;
 }
 
-static void thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier)
+void thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier)
 {
     int ret;
     ret = ABT_barrier_create(num_waiters, &p_barrier->barrier);
     assert(ret == ABT_SUCCESS);
 }
 
-static void thread_barrier_wait(barrier_handle_t *p_barrier)
+void thread_barrier_wait(barrier_handle_t *p_barrier)
 {
     int ret;
     ret = ABT_barrier_wait(p_barrier->barrier);
     assert(ret == ABT_SUCCESS);
 }
 
-static void thread_barrier_destroy(barrier_handle_t *p_barrier)
+void thread_barrier_destroy(barrier_handle_t *p_barrier)
 {
     int ret;
     ret = ABT_barrier_free(&p_barrier->barrier);
     assert(ret == ABT_SUCCESS);
 }
 
-static void thread_create(void (*f)(void *), void *arg,
+void thread_create(void (*f)(void *), void *arg,
                           thread_handle_t *p_thread)
 {
     int ret, rank;
@@ -313,7 +313,7 @@ static void thread_create(void (*f)(void *), void *arg,
     assert(ret == ABT_SUCCESS);
 }
 
-static void thread_join(thread_handle_t *p_thread)
+void thread_join(thread_handle_t *p_thread)
 {
     int ret;
     ret = ABT_thread_free(&p_thread->thread);
