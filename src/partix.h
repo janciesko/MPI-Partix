@@ -6,19 +6,8 @@
 #define PARTITIONS_DEFAULT 8
 #define PARTLENGTH_DEFAULT 16
 
-typedef struct {
-  int num_tasks;
-  int num_threads;
-  int num_partitions;
-  int num_partlength;
-} partix_config_t;
-
-/* Default task args */
-typedef struct {
-  int i;
-  MPI_Request request;
-  int recv_partitions;
-} task_args_t;
+#include <types.h>
+#include <thread.h>
 
 void partix_init(int argc, char *argv[], partix_config_t *conf) {
   conf->num_tasks = argc > 1 ? atoi(argv[1]) : NUM_TASKS_DEFAULT;
@@ -29,7 +18,7 @@ void partix_init(int argc, char *argv[], partix_config_t *conf) {
 
 enum Options {
   partix_noise_on,
-  partix_nouse_off,
+  partix_noise_off,
 };
 
 void partix_add_noise() {}

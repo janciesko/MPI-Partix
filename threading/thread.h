@@ -45,12 +45,15 @@
 #ifndef __PARTIX_THREAD_H__
 #define __PARTIX_THREAD_H__
 
+#include <types.h>
+
 typedef struct thread_handle_t thread_handle_t;
 typedef struct barrier_handle_t barrier_handle_t;
 
 barrier_handle_t *g_barrier;
 
-void partix_parallel_for(void (*)(void), int, int);
+void partix_parallel_for(void (*)(partix_task_args_t *), void *, partix_config_t *, int);
+void partix_barrier();
 void partix_thread_library_init(void);
 void partix_thread_library_finalize(void);
 void partix_thread_barrier_init(int, barrier_handle_t *);
