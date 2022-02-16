@@ -48,7 +48,7 @@
 typedef struct thread_handle_t thread_handle_t;
 typedef struct barrier_handle_t barrier_handle_t;
 
-barrier_handle_t * g_barrier;
+barrier_handle_t *g_barrier;
 
 void partix_parallel_for(void (*)(void), int, int);
 void partix_thread_library_init(void);

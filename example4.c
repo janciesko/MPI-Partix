@@ -45,14 +45,14 @@
 #include "mpi.h"
 #include <stdlib.h>
 
-#include <thread.h>
 #include <partix.h>
+#include <thread.h>
 
-void task_send ( task_args_t * task_args ){
+void task_send(task_args_t *task_args) {
   MPI_Pready(task_args->i, task_args->request);
 };
 
-void task_recv ( task_args_t * task_args ){
+void task_recv(task_args_t *task_args) {
   int part1_complete = 0;
   int part2_complete = 0;
   int flag = 0;
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) /* send-side partitioning */
   partix_config_t conf;
   partix_init(argc, argv, &conf);
   partix_thread_library_init();
-  
+
   MPI_Count partitions = conf.num_partitions;
   MPI_Count partlength = conf.num_partlength;
   double message[partitions * partlength];
@@ -105,7 +105,8 @@ int main(int argc, char *argv[]) /* send-side partitioning */
     MPI_Psend_init(message, send_partitions, 1, send_type, dest, tag, info,
                    MPI_COMM_WORLD, &request);
     MPI_Start(&request);
-    partix_parallel_for(&task_send /*functor*/, send_partitions /*iters*/, partix_noise_on /*config options*/ );
+    partix_parallel_for(&task_send /*functor*/, send_partitions /*iters*/,
+                        partix_noise_on /*config options*/);
     partix_thread_barrier_wait();
     while (!flag) {
       /* Do useful work */
@@ -117,7 +118,8 @@ int main(int argc, char *argv[]) /* send-side partitioning */
     MPI_Precv_init(message, recv_partitions, recv_partlength, MPI_DOUBLE,
                    source, tag, info, MPI_COMM_WORLD, &request);
     MPI_Start(&request);
-    partix_parallel_for(&task_recv /*functor*/, recv_partitions /*iters*/, partix_noise_on /*config options*/ );
+    partix_parallel_for(&task_recv /*functor*/, recv_partitions /*iters*/,
+                        partix_noise_on /*config options*/);
     partix_thread_barrier_wait();
     while (!flag) {
       /* Do useful work */

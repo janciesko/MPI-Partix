@@ -51,23 +51,22 @@ struct thread_handle_t {
   void *arg;
 };
 
-void partix_parallel_for(void (*f)(void), task_args_t & task_args, int num_tasks )
-{
-    #pragma omp parallel for shared(request) num_threads(NUM_THREADS)
-    {
-        for (int taskId = 0; taskId < num_tasks; taskId++) {
-            f(&task_args);
-        }
+void partix_parallel_for(void (*f)(void), task_args_t &task_args,
+                         int num_tasks) {
+#pragma omp parallel for shared(request) num_threads(NUM_THREADS)
+  {
+    for (int taskId = 0; taskId < num_tasks; taskId++) {
+      f(&task_args);
     }
+  }
 }
-
 
 void partix_thread_library_init(void) { ; /* Empty. */ }
 
 void partix_thread_library_finalize(void) { ; /* Empty. */ }
 
 void partix_thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier) {
-  #pragma omp barrier
+#pragma omp barrier
 }
 
 void partix_thread_barrier_wait(barrier_handle_t *p_barrier) { ; /* Empty. */ }
@@ -79,8 +78,6 @@ void partix_thread_barrier_destroy(barrier_handle_t *p_barrier) {
 void *partix_pthread_func(void *arg) { ; /* Empty. */ }
 
 void partix_thread_create(void (*f)(void *), void *arg,
-                          thread_handle_t *p_thread) {
-  
-}
+                          thread_handle_t *p_thread) {}
 
 void partix_thread_join(thread_handle_t *p_thread) { ; /* Empty. */ }

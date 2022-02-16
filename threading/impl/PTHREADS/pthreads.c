@@ -47,9 +47,8 @@
 typedef struct thread_handle_t thread_handle_t;
 typedef struct barrier_handle_t barrier_handle_t;
 
-void partix_parallel_for(void (*f)(void), task_args_t & task_args, int num_tasks )
-{
-}
+void partix_parallel_for(void (*f)(void), task_args_t &task_args,
+                         int num_tasks) {}
 
 void partix_thread_library_init(void) { ; /* Empty. */ }
 
@@ -73,7 +72,8 @@ void *pthread_func(void *arg) {
   return NULL;
 }
 
-void partix_thread_create(void (*f)(void *), void *arg, thread_handle_t *p_thread) {
+void partix_thread_create(void (*f)(void *), void *arg,
+                          thread_handle_t *p_thread) {
   p_thread->f = f;
   p_thread->arg = arg;
   pthread_create(&p_thread->thread, NULL, pthread_func, p_thread);

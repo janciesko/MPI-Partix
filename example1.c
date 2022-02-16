@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
   MPI_Count partitions = conf.num_partitions;
   MPI_Count partlength = conf.num_partlength;
 
-  double message[partitions * partlength];  
+  double message[partitions * partlength];
   int source = 0, dest = 1, tag = 1, flag = 0;
   int myrank, i;
   int provided;

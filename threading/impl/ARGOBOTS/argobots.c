@@ -81,11 +81,12 @@ inline uint32_t xorshift_rand32(uint32_t *p_seed) {
   return seed;
 }
 
-void partix_parallel_for(void (*f)(void), task_args_t & task_args, int num_tasks )
-{
-}
+void partix_parallel_for(void (*f)(void), task_args_t &task_args,
+                         int num_tasks) {}
 
-int partix_sched_init(ABT_sched sched, ABT_sched_config config) { return ABT_SUCCESS; }
+int partix_sched_init(ABT_sched sched, ABT_sched_config config) {
+  return ABT_SUCCESS;
+}
 
 void partix_sched_run(ABT_sched sched) {
   const int work_count_mask_local = 16 - 1;
@@ -285,7 +286,8 @@ void partix_thread_barrier_destroy(barrier_handle_t *p_barrier) {
   assert(ret == ABT_SUCCESS);
 }
 
-void partix_thread_create(void (*f)(void *), void *arg, thread_handle_t *p_thread) {
+void partix_thread_create(void (*f)(void *), void *arg,
+                          thread_handle_t *p_thread) {
   int ret, rank;
   ret = ABT_self_get_xstream_rank(&rank);
   assert(ret == ABT_SUCCESS);

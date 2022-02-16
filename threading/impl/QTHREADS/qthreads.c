@@ -56,17 +56,18 @@ void partix_thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier) {
   ; /* Empty. */
 }
 
-void partix_parallel_for(void (*f)(void), int num_tasks, int opt)
-{
+void partix_parallel_for(void (*f)(void), int num_tasks, int opt) {}
+
+void partix_thread_barrier_wait(void) { ; /* Empty. */ }
+
+void partix_thread_barrier_destroy(barrier_handle_t *p_barrier) {
+  ; /* Empty. */
 }
-
-void partix_thread_barrier_wait( void ) { ; /* Empty. */ }
-
-void partix_thread_barrier_destroy(barrier_handle_t *p_barrier) { ; /* Empty. */ }
 
 void *partix_pthread_func(void *arg) { ; /* Empty. */ }
 
-void partix_thread_create(void (*f)(void *), void *arg, thread_handle_t *p_thread) {
+void partix_thread_create(void (*f)(void *), void *arg,
+                          thread_handle_t *p_thread) {
   ; /* Empty. */
 }
 
