@@ -53,6 +53,7 @@ typedef struct barrier_handle_t barrier_handle_t;
 barrier_handle_t *g_barrier;
 
 void partix_parallel_for(void (*)(partix_task_args_t *), void *, partix_config_t *, int);
+void partix_task(void (*)(partix_task_args_t *), void * , partix_config_t *, int);
 void partix_barrier();
 void partix_thread_library_init(void);
 void partix_thread_library_finalize(void);
