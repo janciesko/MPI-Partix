@@ -48,13 +48,16 @@
 typedef struct thread_handle_t thread_handle_t;
 typedef struct barrier_handle_t barrier_handle_t;
 
-void thread_library_init(void);
-void thread_library_finalize(void);
-void thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier);
-void thread_barrier_wait(barrier_handle_t *p_barrier);
-void thread_barrier_destroy(barrier_handle_t *p_barrier);
-void *pthread_func(void *arg);
-void thread_create(void (*f)(void *), void *arg, thread_handle_t *p_thread);
-void thread_join(thread_handle_t *p_thread);
+barrier_handle_t * g_barrier;
+
+void partix_parallel_for(void (*)(void), int, int);
+void partix_thread_library_init(void);
+void partix_thread_library_finalize(void);
+void partix_thread_barrier_init(int, barrier_handle_t *);
+void partix_thread_barrier_wait(void);
+void partix_thread_barrier_destroy(barrier_handle_t *);
+void *partix_pthread_func(void *);
+void partix_thread_create(void (*f)(void *), void *, thread_handle_t *);
+void partix_thread_join(thread_handle_t *);
 
 #endif /* __PARTIX_THREAD_H__ */

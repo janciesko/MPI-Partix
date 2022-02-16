@@ -45,16 +45,17 @@
 #include "mpi.h"
 #include <stdlib.h>
 
-#include <thread.h>
+#include <partix.h>
 
-#define PARTITIONS 8
-#define COUNT 5
 int main(int argc, char *argv[]) {
+  partix_config_t conf;
+  partix_init(argc, argv, &conf);
+  partix_thread_library_init();
 
-  thread_library_init();
+  MPI_Count partitions = conf.num_partitions;
+  MPI_Count partlength = conf.num_partlength;
 
-  double message[PARTITIONS * COUNT];
-  MPI_Count partitions = PARTITIONS;
+  double message[partitions * partlength];  
   int source = 0, dest = 1, tag = 1, flag = 0;
   int myrank, i;
   int provided;
@@ -64,11 +65,12 @@ int main(int argc, char *argv[]) {
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
   if (myrank == 0) {
-    MPI_Psend_init(message, partitions, COUNT, MPI_DOUBLE, dest, tag,
+    MPI_Psend_init(message, partitions, partlength, MPI_DOUBLE, dest, tag,
                    MPI_COMM_WORLD, MPI_INFO_NULL, &request);
     MPI_Start(&request);
     for (i = 0; i < partitions; ++i) {
       /* compute and fill partition #i, then mark ready: */
+      partix_add_noise();
       MPI_Pready(i, request);
     }
     while (!flag) {
@@ -78,7 +80,7 @@ int main(int argc, char *argv[]) {
     }
     MPI_Request_free(&request);
   } else if (myrank == 1) {
-    MPI_Precv_init(message, partitions, COUNT, MPI_DOUBLE, source, tag,
+    MPI_Precv_init(message, partitions, partlength, MPI_DOUBLE, source, tag,
                    MPI_COMM_WORLD, MPI_INFO_NULL, &request);
     MPI_Start(&request);
     while (!flag) {
@@ -89,8 +91,6 @@ int main(int argc, char *argv[]) {
     MPI_Request_free(&request);
   }
   MPI_Finalize();
-
-  thread_library_finalize();
-
+  partix_thread_library_finalize();
   return 0;
 }

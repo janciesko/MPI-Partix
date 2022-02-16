@@ -81,9 +81,13 @@ inline uint32_t xorshift_rand32(uint32_t *p_seed) {
   return seed;
 }
 
-int sched_init(ABT_sched sched, ABT_sched_config config) { return ABT_SUCCESS; }
+void partix_parallel_for(void (*f)(void), task_args_t & task_args, int num_tasks )
+{
+}
 
-void sched_run(ABT_sched sched) {
+int partix_sched_init(ABT_sched sched, ABT_sched_config config) { return ABT_SUCCESS; }
+
+void partix_sched_run(ABT_sched sched) {
   const int work_count_mask_local = 16 - 1;
   const int work_count_mask_remote = 256 - 1;
   const int work_count_mask_event = 8192 - 1;
@@ -157,9 +161,9 @@ void sched_run(ABT_sched sched) {
   free(all_pools);
 }
 
-int sched_free(ABT_sched sched) { return ABT_SUCCESS; }
+int partix_sched_free(ABT_sched sched) { return ABT_SUCCESS; }
 
-void thread_library_init(void) {
+void partix_thread_library_init(void) {
   int ret;
   ret = ABT_init(0, 0);
   assert(ret == ABT_SUCCESS);
@@ -234,7 +238,7 @@ void thread_library_init(void) {
   assert(ret == ABT_SUCCESS);
 }
 
-void thread_library_finalize(void) {
+void partix_thread_library_finalize(void) {
   int ret;
   /* Join secondary execution streams. */
   for (int i = 1; i < g_abt_global.num_xstreams; i++) {
@@ -263,25 +267,25 @@ void thread_library_finalize(void) {
   g_abt_global.scheds = NULL;
 }
 
-void thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier) {
+void partix_thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier) {
   int ret;
   ret = ABT_barrier_create(num_waiters, &p_barrier->barrier);
   assert(ret == ABT_SUCCESS);
 }
 
-void thread_barrier_wait(barrier_handle_t *p_barrier) {
+void partix_thread_barrier_wait(barrier_handle_t *p_barrier) {
   int ret;
   ret = ABT_barrier_wait(p_barrier->barrier);
   assert(ret == ABT_SUCCESS);
 }
 
-void thread_barrier_destroy(barrier_handle_t *p_barrier) {
+void partix_thread_barrier_destroy(barrier_handle_t *p_barrier) {
   int ret;
   ret = ABT_barrier_free(&p_barrier->barrier);
   assert(ret == ABT_SUCCESS);
 }
 
-void thread_create(void (*f)(void *), void *arg, thread_handle_t *p_thread) {
+void partix_thread_create(void (*f)(void *), void *arg, thread_handle_t *p_thread) {
   int ret, rank;
   ret = ABT_self_get_xstream_rank(&rank);
   assert(ret == ABT_SUCCESS);
@@ -291,7 +295,7 @@ void thread_create(void (*f)(void *), void *arg, thread_handle_t *p_thread) {
   assert(ret == ABT_SUCCESS);
 }
 
-void thread_join(thread_handle_t *p_thread) {
+void partix_thread_join(thread_handle_t *p_thread) {
   int ret;
   ret = ABT_thread_free(&p_thread->thread);
   assert(ret == ABT_SUCCESS);

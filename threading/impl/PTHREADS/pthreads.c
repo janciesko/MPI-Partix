@@ -44,29 +44,26 @@
 #include <pthread.h>
 #include <thread.h>
 
-struct thread_handle_t {
-  pthread_t thread;
-  void (*f)(void *);
-  void *arg;
-};
+typedef struct thread_handle_t thread_handle_t;
+typedef struct barrier_handle_t barrier_handle_t;
 
-struct barrier_handle_t {
-  pthread_barrier_t barrier;
-};
+void partix_parallel_for(void (*f)(void), task_args_t & task_args, int num_tasks )
+{
+}
 
-void thread_library_init(void) { ; /* Empty. */ }
+void partix_thread_library_init(void) { ; /* Empty. */ }
 
-void thread_library_finalize(void) { ; /* Empty. */ }
+void partix_thread_library_finalize(void) { ; /* Empty. */ }
 
-void thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier) {
+void partix_thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier) {
   pthread_barrier_init(&p_barrier->barrier, NULL, num_waiters);
 }
 
-void thread_barrier_wait(barrier_handle_t *p_barrier) {
+void partix_thread_barrier_wait(barrier_handle_t *p_barrier) {
   pthread_barrier_wait(&p_barrier->barrier);
 }
 
-void thread_barrier_destroy(barrier_handle_t *p_barrier) {
+void partix_thread_barrier_destroy(barrier_handle_t *p_barrier) {
   pthread_barrier_destroy(&p_barrier->barrier);
 }
 
@@ -76,12 +73,12 @@ void *pthread_func(void *arg) {
   return NULL;
 }
 
-void thread_create(void (*f)(void *), void *arg, thread_handle_t *p_thread) {
+void partix_thread_create(void (*f)(void *), void *arg, thread_handle_t *p_thread) {
   p_thread->f = f;
   p_thread->arg = arg;
   pthread_create(&p_thread->thread, NULL, pthread_func, p_thread);
 }
 
-void thread_join(thread_handle_t *p_thread) {
+void partix_thread_join(thread_handle_t *p_thread) {
   pthread_join(p_thread->thread, NULL);
 }

@@ -46,21 +46,44 @@
 #include <stdlib.h>
 
 #include <thread.h>
+#include <partix.h>
 
-#define NUM_THREADS 8
-#define NUM_TASKS 64
-#define PARTITIONS NUM_TASKS
-#define PARTLENGTH 16
-#define MESSAGE_LENGTH PARTITIONS *PARTLENGTH
+#if defined (IS_OPENMP)
+void task ( task_args_t * task_args ){
+  #pragma omp single
+  {
+    /* single thread creates 64 tasks to be executed by 8 threads */
+    for (int partition_num = 0; partition_num < 64;
+          partition_num++) {
+      #pragma omp task firstprivate(partition_num)
+      {
+        /* compute and fill partition #partition_num, then mark
+        ready: */
+        /* buffer is filled in arbitrary order from each task */
+        MPI_Pready(partition_num, request);
+      } /*end task*/
+    }   /* end for */
+  }     /* end single */
+};
+#else
+void task ( task_args_t * task_args ){
+  MPI_Pready(task_args->i, task_args->request);
+};
+#endif
+
 int main(int argc, char *argv[]) /* send-side partitioning */
 {
+  partix_config_t conf;
+  partix_init(argc, argv, &conf);
+  partix_thread_library_init();
+  
+  MPI_Count partitions = conf.num_partitions;
+  MPI_Count partlength = conf.num_partlength;
+  double message[partitions * partlength];
 
-  thread_library_init();
-
-  double message[MESSAGE_LENGTH];
-  int send_partitions = PARTITIONS, send_partlength = PARTLENGTH,
-      recv_partitions = 1, recv_partlength = PARTITIONS * PARTLENGTH;
-  int count = 1, source = 0, dest = 1, tag = 1, flag = 0;
+  int send_partitions = partitions, send_partlength = partlength,
+      recv_partitions = 1, recv_partlength = partitions * partlength;
+  int source = 0, dest = 1, tag = 1, flag = 0;
   int myrank;
   int provided;
   MPI_Request request;
@@ -73,26 +96,11 @@ int main(int argc, char *argv[]) /* send-side partitioning */
   MPI_Type_contiguous(send_partlength, MPI_DOUBLE, &send_type);
   MPI_Type_commit(&send_type);
   if (myrank == 0) {
-    MPI_Psend_init(message, send_partitions, count, send_type, dest, tag, info,
+    MPI_Psend_init(message, send_partitions, send_partlength, send_type, dest, tag, info,
                    MPI_COMM_WORLD, &request);
     MPI_Start(&request);
-#pragma omp parallel shared(request) num_threads(NUM_THREADS)
-    {
-#pragma omp single
-      {
-        /* single thread creates 64 tasks to be executed by 8 threads */
-        for (int partition_num = 0; partition_num < NUM_TASKS;
-             partition_num++) {
-#pragma omp task firstprivate(partition_num)
-          {
-            /* compute and fill partition #partition_num, then mark
-            ready: */
-            /* buffer is filled in arbitrary order from each task */
-            MPI_Pready(partition_num, request);
-          } /*end task*/
-        }   /* end for */
-      }     /* end single */
-    }       /* end parallel */
+    partix_parallel_for(&task /*functor*/, partitions /*iters*/, partix_noise_on /*config options*/ );
+    partix_thread_barrier_wait();
     while (!flag) {
       /* Do useful work */
       MPI_Test(&request, &flag, MPI_STATUS_IGNORE);
@@ -112,7 +120,7 @@ int main(int argc, char *argv[]) /* send-side partitioning */
   }
   MPI_Finalize();
 
-  thread_library_finalize();
+  partix_thread_library_finalize();
 
   return 0;
 }
