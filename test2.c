@@ -68,8 +68,9 @@ int main(int argc, char *argv[]) {
   partix_thread_library_init();
   task_args_t args;
   args.some_data = DEFAULT_VALUE;
-  #if defined (PARTIX_ENABLE_OPENMP)
-  #pragma omp parallel num_threads(conf->num_threads)
+  #if defined (OMP)
+  #pragma omp parallel num_threads(conf.num_threads)
+  #pragma omp single
   #endif
   for(int i = 0; i < conf.num_tasks; ++i)
   {

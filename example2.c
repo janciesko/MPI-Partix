@@ -46,10 +46,15 @@
 #include <stdlib.h>
 
 #include <partix.h>
-#include <thread.h>
 
-void task(task_args_t *task_args) {
-  MPI_Pready(task_args->i, task_args->request);
+/* My task args */
+typedef struct {
+  MPI_Request * request;
+} task_args_t;
+
+void task(partix_task_args_t *args) {
+  task_args_t * task_args = args->user_task_args;
+  MPI_Pready(args->taskId, task_args->request);
 };
 
 int main(int argc, char *argv[]) {
@@ -76,12 +81,15 @@ int main(int argc, char *argv[]) {
   MPI_Type_contiguous(partlength, MPI_DOUBLE, &xfer_type);
   MPI_Type_commit(&xfer_type);
 
+  task_args_t args;
+  args.request = &request;
+
   if (myrank == 0) {
     MPI_Psend_init(message, partitions, partlength, xfer_type, dest, tag, info,
                    MPI_COMM_WORLD, &request);
     MPI_Start(&request);
-    partix_parallel_for(&task /*functor*/, partitions /*iters*/,
-                        partix_noise_on /*config options*/);
+    partix_parallel_for(&task /*functor*/, &args /*capture*/, &conf /*iters*/,
+                      partix_noise_off /*config options*/);
     partix_thread_barrier_wait();
     while (!flag) {
       /* Do useful work */

@@ -48,26 +48,15 @@
 #include <partix.h>
 #include <thread.h>
 
-#if defined(IS_OPENMP)
-void task(task_args_t *task_args){
-#pragma omp single
-    {/* single thread creates 64 tasks to be executed by 8 threads */
-     for (int partition_num = 0; partition_num < 64; partition_num++){
-#pragma omp task firstprivate(partition_num)
-         {/* compute and fill partition #partition_num, then mark
-          ready: */
-          /* buffer is filled in arbitrary order from each task */
-          MPI_Pready(partition_num, request);
-} /*end task*/
-} /* end for */
-} /* end single */
-}
-;
-#else
-void task(task_args_t *task_args) {
-  MPI_Pready(task_args->i, task_args->request);
+/* My task args */
+typedef struct {
+  MPI_Request * request;
+} task_args_t;
+
+void task(partix_task_args_t *args) {
+  task_args_t * task_args = args->user_task_args;
+  MPI_Pready(args->taskId, task_args->request);
 };
-#endif
 
 int main(int argc, char *argv[]) /* send-side partitioning */
 {
@@ -84,22 +73,36 @@ int main(int argc, char *argv[]) /* send-side partitioning */
   int source = 0, dest = 1, tag = 1, flag = 0;
   int myrank;
   int provided;
+
   MPI_Request request;
   MPI_Info info = MPI_INFO_NULL;
   MPI_Datatype send_type;
+
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
   if (provided < MPI_THREAD_MULTIPLE)
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
   MPI_Type_contiguous(send_partlength, MPI_DOUBLE, &send_type);
   MPI_Type_commit(&send_type);
+
+  task_args_t args;
+  args.request = &request;
+
+
   if (myrank == 0) {
     MPI_Psend_init(message, send_partitions, send_partlength, send_type, dest,
                    tag, info, MPI_COMM_WORLD, &request);
     MPI_Start(&request);
-    partix_parallel_for(&task /*functor*/, partitions /*iters*/,
-                        partix_noise_on /*config options*/);
-    partix_thread_barrier_wait();
+    #if defined (OMP)
+    #pragma omp parallel num_threads(conf.num_threads)
+    #pragma omp single
+    #endif
+    for(int i = 0; i < conf.num_tasks; ++i)
+    {
+      partix_task(&task /*functor*/, &args /*capture*/, &conf /*iters*/,
+                  partix_noise_off /*config options*/);
+    }
+    partix_barrier();
     while (!flag) {
       /* Do useful work */
       MPI_Test(&request, &flag, MPI_STATUS_IGNORE);
