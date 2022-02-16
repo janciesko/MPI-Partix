@@ -95,6 +95,7 @@ foreach(SRC_FILE ${SOURCES})
   string(REGEX REPLACE "\\.[^.]*$" "" SRC_FILE_NAME ${SRC_FILE_NAME})
   add_executable(${SRC_FILE_NAME} ${SRC_FILE} ${HEADERS})
   target_include_directories(${SRC_FILE_NAME} PRIVATE ${HEADERS_PATH})
+  target_compile_definitions(${SRC_FILE_NAME} PUBLIC ${BACKEND_NAME})
   target_link_libraries(${SRC_FILE_NAME} PUBLIC ${BACKEND_NAME})
 endforeach()
 
