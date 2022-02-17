@@ -54,21 +54,9 @@ typedef struct {
   int recv_partitions;
 } task_args_t;
 
-void send_task_inner(partix_task_args_t *args) {
+void send_task(partix_task_args_t *args) {
   task_args_t * task_args = (task_args_t*) args->user_task_args;
   MPI_Pready(partix_executor_id(), *task_args->request);
-};
-
-void send_task_outer(partix_task_args_t *args) {
-  task_args_t * task_args = (task_args_t*) args->user_task_args;
-  #if defined (OMP)
-  #pragma omp single
-  #endif
-  for(int i = 0; i < args->conf->num_tasks; ++i)
-  {  
-    partix_task(&send_task_inner /*functor*/, args->user_task_args /*capture by ref*/);
-  }
-  partix_taskwait();
 };
 
 void recv_task(partix_task_args_t *args) {
@@ -133,9 +121,14 @@ int main(int argc, char *argv[]) /* send-side partitioning */
     MPI_Psend_init(message, send_partitions, 1, send_type, dest, tag,
                    MPI_COMM_WORLD, info, &request);
     MPI_Start(&request);
-
-    partix_parallel_for(&send_task_outer /*functor*/, &args /*capture by ref*/, &conf);
-
+    #if defined (OMP)
+    #pragma omp parallel num_threads(conf.num_threads)
+    #pragma omp single
+    #endif
+    for(int i = 0; i < conf.num_tasks; ++i)
+    {
+      partix_task(&send_task /*functor*/, &args /*capture*/, &conf /*iters*/);
+    }
     partix_barrier();
     while (!flag) {
       /* Do useful work */
