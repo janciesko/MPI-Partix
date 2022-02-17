@@ -42,8 +42,8 @@
 //@HEADER
 */
 
-#include <stdlib.h>
 #include <omp.h>
+#include <stdlib.h>
 
 #include <thread.h>
 
@@ -55,11 +55,12 @@ struct thread_handle_t {
   void *arg;
 };
 
-partix_config_t * global_conf;
+partix_config_t *global_conf;
 
-void partix_parallel_for(void (*f)(partix_task_args_t *), void * args, partix_config_t * conf){
+void partix_parallel_for(void (*f)(partix_task_args_t *), void *args,
+                         partix_config_t *conf) {
   global_conf = conf;
-  #pragma omp parallel for shared(args) num_threads(conf->num_threads)  
+#pragma omp parallel for shared(args) num_threads(conf->num_threads)
   for (int task = 0; task < conf->num_threads; task++) {
     partix_task_args_t partix_args;
     partix_args.user_task_args = args;
@@ -68,9 +69,10 @@ void partix_parallel_for(void (*f)(partix_task_args_t *), void * args, partix_co
   }
 }
 
-void partix_task(void (*f)(partix_task_args_t *), void * args, partix_config_t * conf){
+void partix_task(void (*f)(partix_task_args_t *), void *args,
+                 partix_config_t *conf) {
   global_conf = conf;
-  #pragma omp task
+#pragma omp task
   {
     partix_task_args_t partix_args;
     partix_args.user_task_args = args;
@@ -78,65 +80,73 @@ void partix_task(void (*f)(partix_task_args_t *), void * args, partix_config_t *
   }
 }
 
-void partix_parallel_for(void (*f)(partix_task_args_t *), void * args){
+void partix_parallel_for(void (*f)(partix_task_args_t *), void *args) {
   partix_critical_enter();
-  if(global_conf==NULL) {
+  if (global_conf == NULL) {
     partix_init(global_conf);
-    // Optionally error out and require the first call into partix_parallel_for to be of the other overload
+    // Optionally error out and require the first call into partix_parallel_for
+    // to be of the other overload
   }
   partix_critical_exit();
-  #pragma omp parallel for num_threads(global_conf->num_threads)  
+#pragma omp parallel for num_threads(global_conf->num_threads)
   for (int task = 0; task < global_conf->num_threads; task++) {
     partix_task_args_t partix_args;
     partix_args.user_task_args = args;
-    partix_args.conf = global_conf; 
+    partix_args.conf = global_conf;
     f(&partix_args);
   }
 }
 
-void partix_task(void (*f)(partix_task_args_t *), void * args){
+void partix_task(void (*f)(partix_task_args_t *), void *args) {
   partix_critical_enter();
-  if(global_conf==NULL) {
+  if (global_conf == NULL) {
     partix_init(global_conf);
-    // Optionally error out and require the first call into partix_parallel_for to be of the other overload
+    // Optionally error out and require the first call into partix_parallel_for
+    // to be of the other overload
   }
   partix_critical_exit();
-  #pragma omp task
+#pragma omp task
   {
-    partix_task_args_t partix_args;   
+    partix_task_args_t partix_args;
     partix_args.user_task_args = args;
-    partix_args.conf = global_conf; 
+    partix_args.conf = global_conf;
     f(&partix_args);
   }
 }
 
-void partix_barrier(void){
-  #pragma omp barrier
+void partix_barrier(void) {
+#pragma omp barrier
 }
 
-void partix_taskwait(void){
-  #pragma omp taskwait
+void partix_taskwait(void) {
+#pragma omp taskwait
 }
 
 void partix_critical_enter(void) { ; /* Empty. */ };
 
 void partix_critical_exit(void) { ; /* Empty. */ };
 
-int partix_executor_id(void){ return omp_get_thread_num(); };
+int partix_executor_id(void) { return omp_get_thread_num(); };
 
 void partix_thread_library_init(void) { ; /* Empty. */ }
 
 void partix_thread_library_finalize(void) { ; /* Empty. */ }
 
-void partix_thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier) { ; /* Empty. */ }
+void partix_thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier) {
+  ; /* Empty. */
+}
 
 void partix_thread_barrier_wait(void) { ; /* Empty. */ }
 
-void partix_thread_barrier_destroy(barrier_handle_t *p_barrier) { ; /* Empty. */ }
+void partix_thread_barrier_destroy(barrier_handle_t *p_barrier) {
+  ; /* Empty. */
+}
 
 void *partix_pthread_func(void *arg) { ; /* Empty. */ }
 
 void partix_thread_create(void (*f)(void *), void *arg,
-                          thread_handle_t *p_thread) { ; /* Empty. */ }
+                          thread_handle_t *p_thread) {
+  ; /* Empty. */
+}
 
 void partix_thread_join(thread_handle_t *p_thread) { ; /* Empty. */ }

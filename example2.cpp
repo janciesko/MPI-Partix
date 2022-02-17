@@ -49,11 +49,11 @@
 
 /* My task args */
 typedef struct {
-  MPI_Request * request;
+  MPI_Request *request;
 } task_args_t;
 
 void task(partix_task_args_t *args) {
-  task_args_t * task_args = (task_args_t*) args->user_task_args;
+  task_args_t *task_args = (task_args_t *)args->user_task_args;
   MPI_Pready(partix_executor_id(), *task_args->request);
 };
 

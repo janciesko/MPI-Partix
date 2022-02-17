@@ -50,11 +50,11 @@
 
 /* My task args */
 typedef struct {
-  MPI_Request * request;
+  MPI_Request *request;
 } task_args_t;
 
 void task(partix_task_args_t *args) {
-  task_args_t * task_args = (task_args_t*) args->user_task_args;
+  task_args_t *task_args = (task_args_t *)args->user_task_args;
   MPI_Pready(partix_executor_id(), *task_args->request);
 };
 
@@ -88,17 +88,15 @@ int main(int argc, char *argv[]) /* send-side partitioning */
   task_args_t args;
   args.request = &request;
 
-
   if (myrank == 0) {
     MPI_Psend_init(message, send_partitions, send_partlength, send_type, dest,
                    tag, MPI_COMM_WORLD, info, &request);
     MPI_Start(&request);
-    #if defined (OMP)
-    #pragma omp parallel num_threads(conf.num_threads)
-    #pragma omp single
-    #endif
-    for(int i = 0; i < conf.num_tasks; ++i)
-    {
+#if defined(OMP)
+#pragma omp parallel num_threads(conf.num_threads)
+#pragma omp single
+#endif
+    for (int i = 0; i < conf.num_tasks; ++i) {
       partix_task(&task /*functor*/, &args /*capture*/, &conf /*iters*/);
     }
     partix_barrier();

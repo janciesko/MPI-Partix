@@ -1,7 +1,7 @@
 #ifndef __PARTIX_TASK_ARGS_H__
 #define __PARTIX_TASK_ARGS_H__
 
-#include <stdbool.h> 
+#include <stdbool.h>
 
 typedef struct {
   int num_tasks;
@@ -14,10 +14,9 @@ typedef struct {
 /* Default task args */
 typedef struct {
   int taskId;
-  void * user_task_args;
-  partix_config_t * conf;
+  void *user_task_args;
+  partix_config_t *conf;
 } partix_task_args_t;
-
 
 enum Options {
   partix_noise_on,
