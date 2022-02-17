@@ -44,6 +44,7 @@
 
 #include "mpi.h"
 #include <stdlib.h>
+#include <assert.h>
 
 #include <partix.h>
 #include <thread.h>
@@ -63,6 +64,10 @@ int main(int argc, char *argv[]) /* send-side partitioning */
   partix_config_t conf;
   partix_init(argc, argv, &conf);
   partix_thread_library_init();
+
+  #if defined (OMP)
+  assert(conf.num_tasks == conf.num_threads);
+  #endif
 
   MPI_Count partitions = conf.num_partitions;
   MPI_Count partlength = conf.num_partlength;

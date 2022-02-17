@@ -13,7 +13,6 @@ typedef struct {
 
 /* Default task args */
 typedef struct {
-  int taskId;
   void *user_task_args;
   partix_config_t *conf;
 } partix_task_args_t;

@@ -44,6 +44,8 @@
 
 #include "mpi.h"
 #include <stdlib.h>
+#include <assert.h>
+
 
 #include <partix.h>
 #include <thread.h>
@@ -80,14 +82,14 @@ void recv_task_inner(partix_task_args_t *args) {
 
   while (part1_complete == 0 || part2_complete == 0) {
     /* test partition #j and #j+1 */
-    MPI_Parrived(*task_args->request, args->taskId, &flag);
+    MPI_Parrived(*task_args->request, partix_executor_id(), &flag);
     if (flag && part1_complete == 0) {
       part1_complete++;
       /* Do work using partition j data */
     }
 
-    if (args->taskId + 1 < task_args->recv_partitions) {
-      MPI_Parrived(*task_args->request, args->taskId + 1, &flag);
+    if (partix_executor_id() + 1 < task_args->recv_partitions) {
+      MPI_Parrived(*task_args->request, partix_executor_id() + 1, &flag);
       if (flag && part2_complete == 0) {
         part2_complete++;
         /* Do work using partition j+1 */
@@ -115,6 +117,10 @@ int main(int argc, char *argv[]) /* send-side partitioning */
   partix_config_t conf;
   partix_init(argc, argv, &conf);
   partix_thread_library_init();
+
+  #if defined (OMP)
+  assert(conf.num_tasks == conf.num_threads);
+  #endif
 
   MPI_Count partitions = conf.num_partitions;
   MPI_Count partlength = conf.num_partlength;
