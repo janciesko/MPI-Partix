@@ -3,7 +3,7 @@ cmake_minimum_required (VERSION 3.16)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 
-project(partix C)
+project(partix CXX)
 
 message(STATUS "Setting policy CMP0074 to use <Package>_ROOT variables")
 cmake_policy(SET CMP0074 NEW)
@@ -68,7 +68,7 @@ list(APPEND BACKEND_PATH "${PREFIX_BACKEND_SRC_PATH}")
 list(APPEND BACKEND_PATH "${PREFIX_BACKEND_SRC_PATH}/impl/${BACKEND_NAME}")
 
 foreach(DIR ${BACKEND_PATH})
-  file(GLOB DIR_SRCS ${DIR}/*.c)
+  file(GLOB DIR_SRCS ${DIR}/*.cpp)
   file(GLOB DIR_HDRS ${DIR}/*.h)
   message(STATUS ${DIR_HDRS} )  
   list(APPEND SOURCES ${DIR_SRCS})
@@ -83,7 +83,7 @@ set(SOURCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 set(HEADERS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/threading")
 list(APPEND HEADERS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
-file(GLOB SOURCES ${SOURCE_PATH}/*.c)
+file(GLOB SOURCES ${SOURCE_PATH}/*.cpp)
 
 foreach(DIR ${HEADERS_PATH})
   file(GLOB DIR_HDRS ${HEADERS_PATH}/*.h)  

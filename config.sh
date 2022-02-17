@@ -4,4 +4,4 @@
 # ---------------------------------------------------------
 
 cd build
-cmake ..  -DCMAKE_C_COMPILER=mpicc -DCMAKE_LINKER=mpicc -DQthreads_ROOT=$QTHREADS_INSTALL_PATH -DPartix_ENABLE_QTHREADS=ON
+cmake ..  -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_LINKER=mpicxx -DQthreads_ROOT=$QTHREADS_INSTALL_PATH -DPartix_ENABLE_QTHREADS=ON

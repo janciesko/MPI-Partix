@@ -42,35 +42,34 @@
 //@HEADER
 */
 
-#include "mpi.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
+#include <pthread.h>
+#include <thread.h>
 
-#include <partix.h>
+typedef struct task_args_t task_args_t;
+typedef struct barrier_handle_t barrier_handle_t;
 
-#define DEFAULT_VALUE 123
+void partix_thread_library_init(void) { ; /* Empty. */ }
 
-/* My task args */
-typedef struct {
-  int some_data;
-} task_args_t;
+void partix_thread_library_finalize(void) { ; /* Empty. */ }
 
-void task(partix_task_args_t *args) {
-  task_args_t * task_args = args->user_task_args;
-  printf("Test1: Printing: %i on task %i.\n", task_args->some_data, args->taskId);  
-  assert(DEFAULT_VALUE == task_args->some_data );
-};
-
-int main(int argc, char *argv[]) {
-  partix_config_t conf;
-  partix_init(argc, argv, &conf);
-  partix_thread_library_init();
-  task_args_t args;
-  args.some_data = DEFAULT_VALUE;
-  partix_parallel_for(&task /*functor*/, &args /*capture*/, &conf /*iters*/,
-                      partix_noise_off /*config options*/);
-  partix_barrier();
-  partix_thread_library_finalize();
-  return 0;
+void partix_thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier) {
+  ; /* Empty. */
 }
+
+void partix_parallel_for(void (*f)(partix_task_args_t *), void * args, partix_config_t * conf, int noise){
+}
+
+void partix_thread_barrier_wait(void) { ; /* Empty. */ }
+
+void partix_thread_barrier_destroy(barrier_handle_t *p_barrier) {
+  ; /* Empty. */
+}
+
+void *partix_pthread_func(void *arg) { ; /* Empty. */ }
+
+void partix_thread_create(void (*f)(void *), void *arg,
+                          thread_handle_t *p_thread) {
+  ; /* Empty. */
+}
+
+void partix_thread_join(thread_handle_t *p_thread) { ; /* Empty. */ }

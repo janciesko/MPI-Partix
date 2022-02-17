@@ -42,55 +42,44 @@
 //@HEADER
 */
 
-#include <omp.h>
-#include <thread.h>
-#include <omp.h>
+#include "mpi.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
 
-struct thread_handle_t {
-  int thread;
-  void (*f)(void *);
-  void *arg;
+#include <partix.h>
+
+#define DEFAULT_VALUE 123
+
+/* My task args */
+typedef struct {
+  int some_data;
+} task_args_t;
+
+void task(partix_task_args_t *args) {
+  task_args_t * task_args = (task_args_t*) args->user_task_args;
+  printf("Test2: Printing: %i on task %i.\n", task_args->some_data, partix_executor_id());  
+  assert(DEFAULT_VALUE == task_args->some_data );
 };
 
-void partix_parallel_for(void (*f)(partix_task_args_t *), void * args, partix_config_t * conf, int noise){
+int main(int argc, char *argv[]) {
+  partix_config_t conf;
+  partix_init(argc, argv, &conf);
+  partix_thread_library_init();
+  task_args_t args; 
+  args.some_data = DEFAULT_VALUE;
 
-#pragma omp parallel for shared(conf, args) num_threads(conf->num_threads)  
-  for (int task = 0; task < conf->num_threads; task++) {
-    partix_task_args_t partix_args;
-    partix_args.taskId = omp_get_thread_num();
-    partix_args.user_task_args = args;
-    f(&partix_args);
-  }
-}
+  #if defined (OMP)
+  #pragma omp parallel num_threads(conf.num_threads)
+  #pragma omp single
+  #endif
 
-
-void partix_task(void (*f)(partix_task_args_t *), void * args, partix_config_t * conf, int noise){
-  #pragma omp task shared(conf, args)
+  for(int i = 0; i < conf.num_tasks; ++i)
   {
-    partix_task_args_t partix_args;
-    partix_args.taskId = omp_get_thread_num();
-    partix_args.user_task_args = args;
-    f(&partix_args);
+    partix_task(&task /*functor*/, &args /*capture by ref*/, &conf);
   }
+  
+  partix_barrier();
+  partix_thread_library_finalize();
+  return 0;
 }
-
-void partix_barrier(void){
-  #pragma omp barrier
-}
-
-void partix_thread_library_init(void) { ; /* Empty. */ }
-
-void partix_thread_library_finalize(void) { ; /* Empty. */ }
-
-void partix_thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier) { ; /* Empty. */ }
-
-void partix_thread_barrier_wait(void) { ; /* Empty. */ }
-
-void partix_thread_barrier_destroy(barrier_handle_t *p_barrier) { ; /* Empty. */ }
-
-void *partix_pthread_func(void *arg) { ; /* Empty. */ }
-
-void partix_thread_create(void (*f)(void *), void *arg,
-                          thread_handle_t *p_thread) { ; /* Empty. */ }
-
-void partix_thread_join(thread_handle_t *p_thread) { ; /* Empty. */ }

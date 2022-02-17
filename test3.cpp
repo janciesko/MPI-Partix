@@ -43,86 +43,46 @@
 */
 
 #include "mpi.h"
+#include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include <partix.h>
-#include <thread.h>
+
+#define DEFAULT_VALUE 123
 
 /* My task args */
 typedef struct {
-  MPI_Request * request;
+  int some_data;
 } task_args_t;
 
-void task(partix_task_args_t *args) {
-  task_args_t * task_args = args->user_task_args;
-  MPI_Pready(args->taskId, task_args->request);
+void task_inner(partix_task_args_t *args) {
+  task_args_t * task_args = (task_args_t*) args->user_task_args;
+  printf("Test3: Printing: %i on task %i.\n", task_args->some_data, partix_executor_id());  
+  assert(DEFAULT_VALUE == task_args->some_data );
 };
 
-int main(int argc, char *argv[]) /* send-side partitioning */
-{
+void task_outer(partix_task_args_t *args) {
+  task_args_t * task_args = (task_args_t*) args->user_task_args;
+  #if defined (OMP)
+  #pragma omp single
+  #endif
+  for(int i = 0; i < args->conf->num_tasks; ++i)
+  {  
+    partix_task(&task_inner /*functor*/, args->user_task_args /*capture by ref*/);
+  }
+  partix_taskwait();
+};
+
+int main(int argc, char *argv[]) {
   partix_config_t conf;
   partix_init(argc, argv, &conf);
   partix_thread_library_init();
-
-  MPI_Count partitions = conf.num_partitions;
-  MPI_Count partlength = conf.num_partlength;
-  double message[partitions * partlength];
-
-  int send_partitions = partitions, send_partlength = partlength,
-      recv_partitions = 1, recv_partlength = partitions * partlength;
-  int source = 0, dest = 1, tag = 1, flag = 0;
-  int myrank;
-  int provided;
-
-  MPI_Request request;
-  MPI_Info info = MPI_INFO_NULL;
-  MPI_Datatype send_type;
-
-  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
-  if (provided < MPI_THREAD_MULTIPLE)
-    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
-  MPI_Type_contiguous(send_partlength, MPI_DOUBLE, &send_type);
-  MPI_Type_commit(&send_type);
-
   task_args_t args;
-  args.request = &request;
-
-
-  if (myrank == 0) {
-    MPI_Psend_init(message, send_partitions, send_partlength, send_type, dest,
-                   tag, info, MPI_COMM_WORLD, &request);
-    MPI_Start(&request);
-    #if defined (OMP)
-    #pragma omp parallel num_threads(conf.num_threads)
-    #pragma omp single
-    #endif
-    for(int i = 0; i < conf.num_tasks; ++i)
-    {
-      partix_task(&task /*functor*/, &args /*capture*/, &conf /*iters*/,
-                  partix_noise_off /*config options*/);
-    }
-    partix_barrier();
-    while (!flag) {
-      /* Do useful work */
-      MPI_Test(&request, &flag, MPI_STATUS_IGNORE);
-      /* Do useful work */
-    }
-    MPI_Request_free(&request);
-  } else if (myrank == 1) {
-    MPI_Precv_init(message, recv_partitions, recv_partlength, MPI_DOUBLE,
-                   source, tag, info, MPI_COMM_WORLD, &request);
-    MPI_Start(&request);
-    while (!flag) {
-      /* Do useful work */
-      MPI_Test(&request, &flag, MPI_STATUS_IGNORE);
-      /* Do useful work */
-    }
-    MPI_Request_free(&request);
-  }
-  MPI_Finalize();
+  args.some_data = DEFAULT_VALUE;
+  
+  partix_parallel_for(&task_outer /*functor*/, &args /*capture by ref*/, &conf);
 
   partix_thread_library_finalize();
-
   return 0;
 }

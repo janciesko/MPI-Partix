@@ -57,8 +57,8 @@ typedef struct {
 } task_args_t;
 
 void task(partix_task_args_t *args) {
-  task_args_t * task_args = args->user_task_args;
-  printf("Test2: Printing: %i on task %i.\n", task_args->some_data, args->taskId);  
+  task_args_t * task_args = (task_args_t*) args->user_task_args;
+  printf("Test1: Printing: %i on task %i.\n", task_args->some_data, partix_executor_id());  
   assert(DEFAULT_VALUE == task_args->some_data );
 };
 
@@ -66,18 +66,13 @@ int main(int argc, char *argv[]) {
   partix_config_t conf;
   partix_init(argc, argv, &conf);
   partix_thread_library_init();
+
   task_args_t args;
   args.some_data = DEFAULT_VALUE;
-  #if defined (OMP)
-  #pragma omp parallel num_threads(conf.num_threads)
-  #pragma omp single
-  #endif
-  for(int i = 0; i < conf.num_tasks; ++i)
-  {
-    partix_task(&task /*functor*/, &args /*capture*/, &conf /*iters*/,
-                partix_noise_off /*config options*/);
-  }
+
+  partix_parallel_for(&task /*functor*/, &args /*capture by ref*/, &conf);
   partix_barrier();
+
   partix_thread_library_finalize();
   return 0;
 }
