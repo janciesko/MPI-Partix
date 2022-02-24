@@ -88,8 +88,13 @@ int main(int argc, char *argv[]) {
     MPI_Psend_init(message, partitions, partlength, xfer_type, dest, tag,
                    MPI_COMM_WORLD, info, &request);
     MPI_Start(&request);
-    partix_parallel_for(&task /*functor*/, &args /*capture*/, &conf /*iters*/);
-    partix_thread_barrier_wait();
+#if defined (OMP)
+#pragma omp parallel num_threads(conf.num_threads)
+#pragma omp single
+#endif
+    for(int i = 0; i < partitions; ++i)
+      partix_task(&task /*functor*/, &args /*capture*/);
+    partix_taskwait();
     while (!flag) {
       /* Do useful work */
       MPI_Test(&request, &flag, MPI_STATUS_IGNORE);
@@ -108,7 +113,6 @@ int main(int argc, char *argv[]) {
     MPI_Request_free(&request);
   }
   MPI_Finalize();
-
   partix_thread_library_finalize();
 
   return 0;

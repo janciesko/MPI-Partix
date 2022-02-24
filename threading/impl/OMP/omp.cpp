@@ -49,67 +49,13 @@
 
 extern void partix_init(partix_config_t *);
 
-struct thread_handle_t {
-  int thread;
-  void (*f)(void *);
-  void *arg;
-};
-
 partix_config_t *global_conf;
 
-void partix_parallel_for(void (*f)(partix_task_args_t *), void *args,
-                         partix_config_t *conf) {
-  global_conf = conf;
-#pragma omp parallel for shared(args) num_threads(conf->num_threads)
-  for (int task = 0; task < conf->num_threads; task++) {
-    partix_task_args_t partix_args;
-    partix_args.user_task_args = args;
-    partix_args.conf = conf;
-    f(&partix_args);
-  }
-}
-
-void partix_task(void (*f)(partix_task_args_t *), void *args,
-                 partix_config_t *conf) {
-  global_conf = conf;
-#pragma omp task
-  {
-    partix_task_args_t partix_args;
-    partix_args.user_task_args = args;
-    f(&partix_args);
-  }
-}
-
-void partix_parallel_for(void (*f)(partix_task_args_t *), void *args) {
-  partix_critical_enter();
-  if (global_conf == NULL) {
-    partix_init(global_conf);
-    // Optionally error out and require the first call into partix_parallel_for
-    // to be of the other overload
-  }
-  partix_critical_exit();
-#pragma omp parallel for num_threads(global_conf->num_threads)
-  for (int task = 0; task < global_conf->num_threads; task++) {
-    partix_task_args_t partix_args;
-    partix_args.user_task_args = args;
-    partix_args.conf = global_conf;
-    f(&partix_args);
-  }
-}
-
 void partix_task(void (*f)(partix_task_args_t *), void *args) {
-  partix_critical_enter();
-  if (global_conf == NULL) {
-    partix_init(global_conf);
-    // Optionally error out and require the first call into partix_parallel_for
-    // to be of the other overload
-  }
-  partix_critical_exit();
 #pragma omp task
   {
     partix_task_args_t partix_args;
     partix_args.user_task_args = args;
-    partix_args.conf = global_conf;
     f(&partix_args);
   }
 }

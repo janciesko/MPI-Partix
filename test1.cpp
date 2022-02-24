@@ -66,13 +66,18 @@ int main(int argc, char *argv[]) {
   partix_config_t conf;
   partix_init(argc, argv, &conf);
   partix_thread_library_init();
+  task_args_t task_args; 
+  task_args.some_data = DEFAULT_VALUE;
 
-  task_args_t args;
-  args.some_data = DEFAULT_VALUE;
-
-  partix_parallel_for(&task /*functor*/, &args /*capture by ref*/, &conf);
-  partix_barrier();
-
+  #if defined (OMP)
+  #pragma omp parallel num_threads(conf.num_threads)
+  #pragma omp single
+  #endif
+  for(int i = 0; i < conf.num_tasks; ++i)
+  {
+    partix_task(&task /*functor*/, &task_args /*capture by ref*/);
+  }
+  partix_taskwait();
   partix_thread_library_finalize();
   return 0;
 }

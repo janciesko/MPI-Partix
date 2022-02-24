@@ -1,7 +1,13 @@
-#ifndef __PARTIX_TASK_ARGS_H__
-#define __PARTIX_TASK_ARGS_H__
+#ifndef __PARTIX_TYPES_H__
+#define __PARTIX_TYPES_H__
+
+#define MAX_THREADS 1024
+#define MAX_NESTING 64
 
 #include <stdbool.h>
+#if defined (PTHREADS)
+#include <pthread.h>
+#endif
 
 typedef struct {
   int num_tasks;
@@ -10,8 +16,18 @@ typedef struct {
   int num_partlength;
   bool add_noise;
 } partix_config_t;
+/*
+typedef struct
+{
+  #if defined (PTHREADS)
+  pthread_t threadHandle[MAX_THREADS];
+  int counter;
+  barrier_handle_t *p_barrier;
+  #endif
+} partix_threadsHandle_t;
+*/
 
-/* Default task args */
+/* Internal task object */
 typedef struct {
   void *user_task_args;
   partix_config_t *conf;
@@ -22,4 +38,4 @@ enum Options {
   partix_noise_off,
 };
 
-#endif /* __PARTIX_TASK_ARGS_H__*/
+#endif /* __PARTIX_TYPES_H__ */
