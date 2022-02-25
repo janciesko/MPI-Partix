@@ -42,14 +42,11 @@
 //@HEADER
 */
 
-#include <omp.h>
 #include <stdlib.h>
-
 #include <thread.h>
 
-extern void partix_init(partix_config_t *);
-
-partix_config_t *global_conf;
+partix_mutex_t global_mutex;
+partix_config_t * global_conf;
 
 void partix_task(void (*f)(partix_task_args_t *), void *args) {
 #pragma omp task
@@ -60,39 +57,42 @@ void partix_task(void (*f)(partix_task_args_t *), void *args) {
   }
 }
 
-void partix_barrier(void) {
-#pragma omp barrier
-}
-
 void partix_taskwait(void) {
 #pragma omp taskwait
 }
 
-void partix_critical_enter(void) { ; /* Empty. */ };
+void partix_mutex_init(partix_mutex_t * m){
+  omp_init_lock(m);
+};
+void partix_mutex_destroy(partix_mutex_t * m){ 
+  omp_destroy_lock(m);
+};
 
-void partix_critical_exit(void) { ; /* Empty. */ };
+void partix_mutex_enter(partix_mutex_t * m) { 
+  omp_set_lock(m);  
+};
+
+void partix_mutex_exit(partix_mutex_t * m) { 
+  omp_unset_lock(m);
+};
+
+void partix_mutex_init(){
+  omp_init_lock(&global_mutex);
+};
+void partix_mutex_destroy(){ 
+  omp_destroy_lock(&global_mutex);
+};
+
+void partix_mutex_enter(void) { 
+  omp_set_lock(&global_mutex);  
+};
+
+void partix_mutex_exit(void) { 
+  omp_unset_lock(&global_mutex);
+};
 
 int partix_executor_id(void) { return omp_get_thread_num(); };
 
-void partix_thread_library_init(void) { ; /* Empty. */ }
+void partix_library_init(void) { ; /* Empty. */ }
 
-void partix_thread_library_finalize(void) { ; /* Empty. */ }
-
-void partix_thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier) {
-  ; /* Empty. */
-}
-
-void partix_thread_barrier_wait(void) { ; /* Empty. */ }
-
-void partix_thread_barrier_destroy(barrier_handle_t *p_barrier) {
-  ; /* Empty. */
-}
-
-void *partix_pthread_func(void *arg) { ; /* Empty. */ }
-
-void partix_thread_create(void (*f)(void *), void *arg,
-                          thread_handle_t *p_thread) {
-  ; /* Empty. */
-}
-
-void partix_thread_join(thread_handle_t *p_thread) { ; /* Empty. */ }
+void partix_library_finalize(void) { ; /* Empty. */ }

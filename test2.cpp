@@ -43,9 +43,9 @@
 */
 
 #include "mpi.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cassert>
 
 #include <partix.h>
 
@@ -75,7 +75,7 @@ void task_outer(partix_task_args_t *args) {
 int main(int argc, char *argv[]) {
   partix_config_t conf;
   partix_init(argc, argv, &conf);
-  partix_thread_library_init();
+  partix_library_init();
   task_args_t task_args;
   task_args.some_data = DEFAULT_VALUE;
   task_args.iters = 1;
@@ -86,10 +86,11 @@ int main(int argc, char *argv[]) {
   #endif
 
   for(int i = 0; i < conf.num_tasks; ++i)
-  {
+  { 
     partix_task(&task_outer /*functor*/, &task_args /*capture by ref*/);
   }
+
   partix_taskwait();
-  partix_thread_library_finalize();
+  partix_library_finalize();
   return 0;
 }

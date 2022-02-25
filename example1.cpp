@@ -50,7 +50,7 @@
 int main(int argc, char *argv[]) {
   partix_config_t conf;
   partix_init(argc, argv, &conf);
-  partix_thread_library_init();
+  partix_library_init();
 
   MPI_Count partitions = conf.num_partitions;
   MPI_Count partlength = conf.num_partlength;
@@ -91,6 +91,6 @@ int main(int argc, char *argv[]) {
     MPI_Request_free(&request);
   }
   MPI_Finalize();
-  partix_thread_library_finalize();
+  partix_library_finalize();
   return 0;
 }

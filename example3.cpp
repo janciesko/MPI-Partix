@@ -87,7 +87,7 @@ void send_task(partix_task_args_t *args) {
 int main(int argc, char *argv[]) {
   partix_config_t conf;
   partix_init(argc, argv, &conf);
-  partix_thread_library_init();
+  partix_library_init();
 
   MPI_Count send_partitions = conf.num_partitions;
   MPI_Count send_partlength = conf.num_partlength;
@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
     MPI_Request_free(&request);
   }
   MPI_Finalize();
-  partix_thread_library_finalize();
+  partix_library_finalize();
 
   return 0;
 }

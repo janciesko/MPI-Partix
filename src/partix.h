@@ -7,9 +7,12 @@
 #define PARTLENGTH_DEFAULT 16
 
 #include <thread.h>
-#include <types.h>
 
 #define DEFAULT_CONF_VAL 1
+
+#define debug(...) printf(__VA_ARGS__)
+
+extern partix_config_t * global_conf;
 
 void partix_init(int argc, char *argv[], partix_config_t *conf) {
   conf->num_tasks = argc > 1 ? atoi(argv[1]) : NUM_TASKS_DEFAULT;
@@ -17,6 +20,9 @@ void partix_init(int argc, char *argv[], partix_config_t *conf) {
   conf->num_partitions = argc > 3 ? atoi(argv[3]) : PARTITIONS_DEFAULT;
   conf->num_partlength = argc > 4 ? atoi(argv[4]) : PARTLENGTH_DEFAULT;
   conf->add_noise = partix_noise_off;
+
+  /* conf object duration should be valid until partix_finalize() */
+  global_conf = conf;
 }
 
 void partix_finalize() {; /* Empty. */ }
