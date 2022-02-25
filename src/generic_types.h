@@ -1,6 +1,8 @@
 #ifndef __PARTIX_GENERIC_TYPES_H__
 #define __PARTIX_GENERIC_TYPES_H__
 
+#include <cstddef>
+
 typedef struct {
   int num_tasks;
   int num_threads;
@@ -9,7 +11,7 @@ typedef struct {
   bool add_noise;
 } partix_config_t;
 
-typedef size_t partix_context_t;
+typedef std::size_t partix_context_t;
 
 /* Internal task object */
 typedef struct {

@@ -43,84 +43,65 @@
 */
 
 #include <thread.h>
+#include <map>
+#include <cassert>
 
-#define SUCCEED(f) assert(f != 0)
-#define MAX_THREADS 1024
+#define SUCCEED(f) assert((f)!= 0)
+#define MAX_THREADS 128
 
-typedef pthread_mutex_t partix_mutex_t;
 partix_mutex_t global_mutex;
 partix_mutex_t context_mutex;
+partix_config_t * global_conf;
+
+typedef struct 
+{
+  pthread_t thread;
+  partix_task_args_t args;
+} thread_handle_t;
 
 /* We need this to implement taskwait*/
 typedef struct
 {
-  pthread_t threadHandle[MAX_THREADS];
+  thread_handle_t threadHandle[MAX_THREADS];
   int context_task_counter;
 } partix_handle_t;
 
-typedef std::map<size_t, partix_handle_t> partix_context_map_t;
+typedef std::map<size_t, partix_handle_t*> partix_context_map_t;
 partix_context_map_t context_map; 
 
 __attribute__ ((noinline))
-void * get_context(int context)
+size_t get_context(size_t context)
 {
-  void *addr = __builtin_extract_return_addr (__builtin_return_address (context+1));
+  (void) context;
+  const unsigned int ctx = 1;
+  size_t addr = (size_t) __builtin_extract_return_addr (__builtin_return_address (1));
+  return addr;
 }
 
-__attribute__ ((noinline))
-void partix_task(void (*f)(partix_task_args_t *), void *args) {
-  void * context = get_context(0);
-  pthread_t * threadhandle = register_task(context);
-  partix_task_args_t partix_args;
-  partix_args.user_task_args = args;
-  partix_args.conf = global_conf;
-  partix_thread_create(f, args, threadhandle)); 
-}
-
-pthread_t * register_task(void * context)
+thread_handle_t * register_task(size_t context)
 {
-  assert(context != NULL);
   partix_context_map_t::iterator it;
-  partix_mutex_enter(context_mutex);
+  partix_mutex_enter(&context_mutex);
   it = context_map.find(context);
 
   if (it != context_map.end())
   {
-    partix_handle_t * context_handle = it.second();
+    partix_handle_t * context_handle = it->second;
     context_handle->context_task_counter++;
-    partix_mutex_exit(context_mutex); 
-    return context_handle->threadHandle[context_handle->context_task_counter];
+    partix_mutex_exit(&context_mutex); 
+    return &context_handle->threadHandle[context_handle->context_task_counter];
   }else 
   {
     partix_handle_t * context_handle = (partix_handle_t *) calloc (1, sizeof(partix_handle_t));
-    it = context_map.insert(std::pair<void*,partix_handle_t*>(context,context_handle));
-    partix_handle_t * context_handle = it.second();
+    const auto it_insert = context_map.insert(std::pair<size_t,partix_handle_t*>(context,context_handle));
+    if(it_insert.second){/*Insert successful*/}
     context_handle->context_task_counter++;
-    partix_mutex_exit(context_mutex); 
-    return context_handle->threadHandle[context_handle->context_task_counter];
+    partix_mutex_exit(&context_mutex); 
+    return &context_handle->threadHandle[context_handle->context_task_counter];
   }
   assert(false); //DO NOT REACH HERE
 }
 
-void partix_taskwait()
-{
-  void * context = get_context(0);
-  partix_context_map_t::iterator it;
-  it = context_map.find(context);
-  if (it == context_map.end())
-  return;
-
-  partix_handle_t * context_handle = it.second();
-  for(int i = 0; i < context_handle->context_task_counter; ++i)
-  {
-    SUCCEED(partix_thread_join(context_handle->threadHandle[i]));
-  }
-  free(context_handle);
-  partix_mutex_enter(context_mutex);
-  context_map.erase(it);
-  partix_mutex_exit(context_mutex); 
-  return;
-}
 
 void partix_mutex_enter()
 {
@@ -147,28 +128,59 @@ void partix_mutex_init(partix_mutex_t  * m)
   SUCCEED(pthread_mutex_init(m, NULL));
 }
 
-void partix_mutex_distroy(partix_mutex_t * m)
+void partix_mutex_destroy(partix_mutex_t * m)
 {
   SUCCEED(pthread_mutex_destroy(m));
 }
 
-int partix_executor_id(void) { return pthread_getthreadid_np(); };
+int partix_executor_id(void) { return pthread_self(); };
 
-void partix_thread_library_init(void) { 
+void partix_library_init(void) { 
   partix_mutex_init(&global_mutex);
   partix_mutex_init(&context_mutex);
   
  }
 
-void partix_thread_library_finalize(void) { 
+void partix_library_finalize(void) { 
   partix_mutex_destroy(&global_mutex);
   partix_mutex_destroy(&context_mutex);
  }
 
-void partix_thread_create(void (*f)(void *), partix_task_args_t *args, pthread_t * handle ) {  
-  SUCCEED(pthread_create(handle, NULL, pthread_func, args));
+void partix_thread_create(void (*f)(partix_task_args_t *), void *args, pthread_t * handle ){
+  SUCCEED(pthread_create(handle, NULL, (void* (*)(void*))f, args));
 }
 
 void partix_thread_join(pthread_t handle) {
   SUCCEED(pthread_join(handle, NULL));
 }
+
+__attribute__ ((noinline))
+void partix_task(void (*f)(partix_task_args_t *), void *user_args) {
+  size_t context = get_context(0);
+  thread_handle_t * threadhandle = register_task(context);
+  partix_task_args_t * partix_args = & threadhandle->args;
+  partix_args->user_task_args = user_args;
+  partix_args->conf = global_conf;
+  partix_thread_create(f, partix_args, &threadhandle->thread); 
+}
+
+void partix_taskwait()
+{
+  size_t context = get_context(0);
+  partix_context_map_t::iterator it;
+  it = context_map.find(context);
+  if (it == context_map.end())
+  return;
+
+  partix_handle_t * context_handle = it->second;
+  for(int i = 0; i < context_handle->context_task_counter; ++i)
+  {
+    partix_thread_join(context_handle->threadHandle[i].thread);
+  }
+  free(context_handle);
+  partix_mutex_enter(&context_mutex);
+  context_map.erase(it);
+  partix_mutex_exit(&context_mutex); 
+  return;
+}
+
