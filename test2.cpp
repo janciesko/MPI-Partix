@@ -59,7 +59,7 @@ typedef struct {
 
 void task_inner(partix_task_args_t *args) {
   task_args_t *task_args = (task_args_t *)args->user_task_args;
-  printf("Test2: Printing: %i on task %i.\n", task_args->some_data,
+  printf("Test1: Printing: %i on task %u.\n", task_args->some_data,
          partix_executor_id());
   assert(DEFAULT_VALUE == task_args->some_data);
 };
