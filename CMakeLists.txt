@@ -82,6 +82,11 @@ target_include_directories(${BACKEND_NAME} PRIVATE "${PREFIX_BACKEND_SRC_PATH}/i
 target_compile_definitions(${BACKEND_NAME} PUBLIC ${BACKEND_NAME})
 target_link_libraries(${BACKEND_NAME} PUBLIC ${PUBLIC_DEPS})
 
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+target_compile_definitions(${BACKEND_NAME} PUBLIC "DEBUG")
+message(STATUS "Building with DEBUG=ON")
+endif()
+
 set(SOURCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 set(HEADERS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/threading")
 list(APPEND HEADERS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src")
@@ -101,5 +106,8 @@ foreach(SRC_FILE ${SOURCES})
   target_include_directories(${SRC_FILE_NAME} PRIVATE "${PREFIX_BACKEND_SRC_PATH}/impl/${BACKEND_NAME}")
   target_compile_definitions(${SRC_FILE_NAME} PUBLIC ${BACKEND_NAME})
   target_link_libraries(${SRC_FILE_NAME} PUBLIC ${BACKEND_NAME})
+  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  target_compile_definitions(${SRC_FILE_NAME} PUBLIC "DEBUG")
+  endif()
 endforeach()
 
