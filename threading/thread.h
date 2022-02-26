@@ -48,18 +48,26 @@
 #include <generic_types.h>
 #include <types.h>
 
-void partix_task(void (*)(partix_task_args_t *), void *);
-void partix_task(void (*)(partix_task_args_t *), void *, partix_context_t*);
+#if defined(DEBUG)
+#define debug(m) printf("%s\n", m)
+#else
+#define debug(m)
+#endif
+
+__attribute__((noinline)) void partix_task(void (*)(partix_task_args_t *),
+                                           void *);
+__attribute__((noinline)) void partix_task(void (*)(partix_task_args_t *),
+                                           void *, partix_context_t *);
 
 void partix_mutex_enter(void);
 void partix_mutex_exit(void);
 void partix_mutex_enter(partix_mutex_t *);
 void partix_mutex_exit(partix_mutex_t *);
-void partix_mutex_init(partix_mutex_t  *);
-void partix_mutex_destroy(partix_mutex_t  *);
+void partix_mutex_init(partix_mutex_t *);
+void partix_mutex_destroy(partix_mutex_t *);
 
-void partix_taskwait(void);
-void partix_taskwait(partix_context_t*);
+__attribute__((noinline)) void partix_taskwait(void);
+__attribute__((noinline)) void partix_taskwait(partix_context_t *);
 
 int partix_executor_id(void);
 

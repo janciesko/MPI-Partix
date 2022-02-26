@@ -10,8 +10,6 @@
 
 #define DEFAULT_CONF_VAL 1
 
-#define debug(...) printf(__VA_ARGS__)
-
 extern partix_config_t * global_conf;
 
 void partix_init(int argc, char *argv[], partix_config_t *conf) {

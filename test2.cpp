@@ -43,9 +43,9 @@
 */
 
 #include "mpi.h"
+#include <cassert>
 #include <cstdio>
 #include <cstdlib>
-#include <cassert>
 
 #include <partix.h>
 
@@ -58,15 +58,15 @@ typedef struct {
 } task_args_t;
 
 void task_inner(partix_task_args_t *args) {
-  task_args_t * task_args = (task_args_t*) args->user_task_args;
-  printf("Test2: Printing: %i on task %i.\n", task_args->some_data, partix_executor_id());  
-  assert(DEFAULT_VALUE == task_args->some_data );
+  task_args_t *task_args = (task_args_t *)args->user_task_args;
+  printf("Test2: Printing: %i on task %i.\n", task_args->some_data,
+         partix_executor_id());
+  assert(DEFAULT_VALUE == task_args->some_data);
 };
 
 void task_outer(partix_task_args_t *args) {
-  task_args_t * task_args = (task_args_t*) args->user_task_args;
-  for(int i = 0; i < task_args->iters; ++i)
-  {  
+  task_args_t *task_args = (task_args_t *)args->user_task_args;
+  for (int i = 0; i < task_args->iters; ++i) {
     partix_task(&task_inner /*functor*/, task_args /*capture by ref*/);
   }
   partix_taskwait();
@@ -79,14 +79,13 @@ int main(int argc, char *argv[]) {
   task_args_t task_args;
   task_args.some_data = DEFAULT_VALUE;
   task_args.iters = 1;
-  
-  #if defined (OMP)
-  #pragma omp parallel num_threads(conf.num_threads)
-  #pragma omp single
-  #endif
 
-  for(int i = 0; i < conf.num_tasks; ++i)
-  { 
+#if defined(OMP)
+#pragma omp parallel num_threads(conf.num_threads)
+#pragma omp single
+#endif
+
+  for (int i = 0; i < conf.num_tasks; ++i) {
     partix_task(&task_outer /*functor*/, &task_args /*capture by ref*/);
   }
 

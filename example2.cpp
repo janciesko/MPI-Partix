@@ -88,11 +88,11 @@ int main(int argc, char *argv[]) {
     MPI_Psend_init(message, partitions, partlength, xfer_type, dest, tag,
                    MPI_COMM_WORLD, info, &request);
     MPI_Start(&request);
-#if defined (OMP)
+#if defined(OMP)
 #pragma omp parallel num_threads(conf.num_threads)
 #pragma omp single
 #endif
-    for(int i = 0; i < partitions; ++i)
+    for (int i = 0; i < partitions; ++i)
       partix_task(&task /*functor*/, &args /*capture*/);
     partix_taskwait();
     while (!flag) {
