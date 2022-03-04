@@ -68,15 +68,8 @@ typedef struct {
 typedef std::map<size_t, partix_handle_t *> partix_context_map_t;
 partix_context_map_t context_map;
 
-__attribute__((noinline)) size_t get_context_inner() {
-  debug("get_context_inner");
-  const unsigned int level = 2;
-  size_t addr =
-      (size_t)__builtin_extract_return_addr(__builtin_frame_address(level));
-  return addr;
-}
 
-__attribute__((noinline)) size_t get_context_outer() {
+__attribute__((noinline)) size_t get_context() {
   debug("get_context_outer");
   const unsigned int level = 2;
   size_t addr =
@@ -88,7 +81,6 @@ thread_handle_t *register_task(size_t context) {
   partix_context_map_t::iterator it;
   partix_mutex_enter(&context_mutex);
   it = context_map.find(context);
-
   if (it != context_map.end()) {
     partix_handle_t *context_handle = it->second;
     debug("register_task, it != context_map.end()");
@@ -179,7 +171,7 @@ __attribute__((noinline)) void partix_thread_join(pthread_t handle) {
 
 __attribute__((noinline)) void partix_task(void (*f)(partix_task_args_t *),
                                            void *user_args) {
-  size_t context = get_context_inner();
+  size_t context = get_context();
   thread_handle_t *threadhandle = register_task(context);
   partix_task_args_t *partix_args = &threadhandle->args;
   partix_args->user_task_args = user_args;
@@ -189,7 +181,7 @@ __attribute__((noinline)) void partix_task(void (*f)(partix_task_args_t *),
 }
 
 __attribute__((noinline)) void partix_taskwait() {
-  size_t context = get_context_outer();
+  size_t context = get_context();
   partix_context_map_t::iterator it;
   it = context_map.find(context);
   if (it == context_map.end()) {
