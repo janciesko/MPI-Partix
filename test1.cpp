@@ -51,18 +51,20 @@
 
 #define DEFAULT_VALUE 123
 
+int reduction_var = 0;
+
 /* My task args */
 typedef struct {
   int some_data;
 } task_args_t;
 
-void task2(void) { printf("task2\n"); }
-
 __attribute__((noinline)) void task(partix_task_args_t *args) {
   task_args_t *task_args = (task_args_t *)args->user_task_args;
   printf("Test1: Printing: %i on task %u.\n", task_args->some_data,
          partix_executor_id());
-  assert(DEFAULT_VALUE == task_args->some_data);
+  partix_mutex_enter();
+  reduction_var += task_args->some_data;
+  partix_mutex_exit();
 };
 
 int main(int argc, char *argv[]) {
@@ -80,6 +82,9 @@ int main(int argc, char *argv[]) {
     partix_task(&task /*functor*/, &task_args /*capture by ref*/);
   }
   partix_taskwait();
+
+  assert(reduction_var == DEFAULT_VALUE * conf.num_tasks);
+
   partix_library_finalize();
   return 0;
 }

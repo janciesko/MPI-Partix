@@ -51,6 +51,8 @@
 
 #define DEFAULT_VALUE 123
 
+int reduction_var = 0;
+
 /* My task args */
 typedef struct {
   int some_data;
@@ -61,7 +63,9 @@ void task_inner(partix_task_args_t *args) {
   task_args_t *task_args = (task_args_t *)args->user_task_args;
   printf("Test1: Printing: %i on task %u.\n", task_args->some_data,
          partix_executor_id());
-  assert(DEFAULT_VALUE == task_args->some_data);
+  partix_mutex_enter();
+  reduction_var += task_args->some_data;
+  partix_mutex_exit();
 };
 
 void task_outer(partix_task_args_t *args) {
@@ -78,7 +82,7 @@ int main(int argc, char *argv[]) {
   partix_library_init();
   task_args_t task_args;
   task_args.some_data = DEFAULT_VALUE;
-  task_args.iters = 1;
+  task_args.iters = 4;
 
 #if defined(OMP)
 #pragma omp parallel num_threads(conf.num_threads)
@@ -90,6 +94,9 @@ int main(int argc, char *argv[]) {
   }
 
   partix_taskwait();
+
+  assert(reduction_var == DEFAULT_VALUE * conf.num_tasks * task_args.iters);
+
   partix_library_finalize();
   return 0;
 }
