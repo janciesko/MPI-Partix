@@ -48,7 +48,7 @@
 #include<malloc.h>
 
 #define SUCCEED(val) assert(val == 0)
-#define MAX_THREADS 128
+#define MAX_THREADS 1048576
 
 partix_mutex_t global_mutex;
 partix_mutex_t context_mutex;
@@ -67,7 +67,6 @@ typedef struct {
 
 typedef std::map<size_t, partix_handle_t *> partix_context_map_t;
 partix_context_map_t context_map;
-
 
 __attribute__((noinline)) size_t get_context() {
   debug("get_context_outer");
