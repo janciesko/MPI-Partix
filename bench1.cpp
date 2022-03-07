@@ -59,7 +59,7 @@ typedef struct {
   int some_data;
 } task_args_t;
 
-__attribute__((noinline)) void task(partix_task_args_t *args) {
+void task(partix_task_args_t *args) {
   //Do nothing
   task_args_t *task_args = (task_args_t *)args->user_task_args;
   partix_mutex_enter();
