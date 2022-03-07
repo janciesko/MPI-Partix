@@ -91,7 +91,6 @@ int main(int argc, char *argv[]) {
 
   MPI_Count send_partitions = conf.num_partitions;
   MPI_Count send_partlength = conf.num_partlength;
-  send_partlength += send_partlength % 2;
   MPI_Count recv_partitions = send_partitions * 2;
   MPI_Count recv_partlength = send_partlength / 2;
 
@@ -103,21 +102,23 @@ int main(int argc, char *argv[]) {
 
   MPI_Request request;
   MPI_Info info = MPI_INFO_NULL;
-  MPI_Datatype xfer_type;
+  MPI_Datatype send_xfer_type;
+  MPI_Datatype recv_xfer_type;
 
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
   if (provided < MPI_THREAD_MULTIPLE)
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
-  MPI_Type_contiguous(send_partlength, MPI_DOUBLE, &xfer_type);
-  MPI_Type_commit(&xfer_type);
+  MPI_Type_contiguous(send_partlength, MPI_DOUBLE, &send_xfer_type);
+  MPI_Type_contiguous(recv_partlength, MPI_DOUBLE, &recv_xfer_type);
+  MPI_Type_commit(&send_xfer_type);
+  MPI_Type_commit(&recv_xfer_type);
 
-  send_task_args_t * send_args = (send_task_args_t *) calloc (conf.num_partitions, sizeof(send_task_args_t)) ;
-  recv_task_args_t * recv_args = (recv_task_args_t *) calloc (conf.num_partitions, sizeof(recv_task_args_t)) ;
+  send_task_args_t * send_args = (send_task_args_t *) calloc (send_partitions, sizeof(send_task_args_t)) ;
+  recv_task_args_t * recv_args = (recv_task_args_t *) calloc (recv_partitions, sizeof(recv_task_args_t)) ;
 
-  
   if (myrank == 0) {
-    MPI_Psend_init(message, send_partitions, 1, xfer_type, dest,
+    MPI_Psend_init(message, send_partitions, 1, send_xfer_type, dest,
                    tag, MPI_COMM_WORLD, info, &request);
     MPI_Start(&request);
 #if defined(OMP)
@@ -137,7 +138,7 @@ int main(int argc, char *argv[]) {
     }
     MPI_Request_free(&request);
   } else if (myrank == 1) {
-    MPI_Precv_init(message, recv_partitions, 1, xfer_type, source,
+    MPI_Precv_init(message, recv_partitions, 1, recv_xfer_type, source,
                    tag, MPI_COMM_WORLD, info, &request);
     MPI_Start(&request);
 #if defined(OMP)
