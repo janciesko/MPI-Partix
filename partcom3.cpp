@@ -50,14 +50,14 @@
 /* My task args */
 typedef struct {
   MPI_Request *request;
-  int partition;
+  int partition_id;
 } send_task_args_t;
 
 /* My task args */
 typedef struct {
   MPI_Request *request;
-  int partition;
   int recv_partitions;
+  int partition_id;
 } recv_task_args_t;
 
 void recv_task(partix_task_args_t *args) {
@@ -66,13 +66,13 @@ void recv_task(partix_task_args_t *args) {
   int flag1 = 0;
   int flag2 = 0;
 
-  int partition = task_args->partition;
+  int partition_id = task_args->partition_id;
 
   while (flag1 == 0 || flag1 == 0) {
-    /* test partition #partition and #partition+1 */
-    MPI_Parrived(*task_args->request, partition, &flag1);
-    if (partition + 1 < task_args->recv_partitions) {
-      MPI_Parrived(*task_args->request, partition + 1, &flag2);
+    /* test partition_id #partition_id and #partition_id+1 */
+    MPI_Parrived(*task_args->request, partition_id, &flag1);
+    if (partition_id + 1 < task_args->recv_partitions) {
+      MPI_Parrived(*task_args->request, partition_id + 1, &flag2);
     } else {
       flag2++;
     }
@@ -81,7 +81,7 @@ void recv_task(partix_task_args_t *args) {
 
 void send_task(partix_task_args_t *args) {
   send_task_args_t *task_args = (send_task_args_t *)args->user_task_args;
-  MPI_Pready(task_args->partition, *task_args->request);
+  MPI_Pready(task_args->partition_id, *task_args->request);
 };
 
 int main(int argc, char *argv[]) {
@@ -112,23 +112,22 @@ int main(int argc, char *argv[]) {
   MPI_Type_contiguous(send_partlength, MPI_DOUBLE, &xfer_type);
   MPI_Type_commit(&xfer_type);
 
-  send_task_args_t send_args;
-  recv_task_args_t recv_args;
+  send_task_args_t * send_args = (send_task_args_t *) calloc (conf.num_partitions, sizeof(send_task_args_t)) ;
+  recv_task_args_t * recv_args = (recv_task_args_t *) calloc (conf.num_partitions, sizeof(recv_task_args_t)) ;
+
   
   if (myrank == 0) {
-    MPI_Psend_init(message, send_partitions, send_partlength, xfer_type, dest,
+    MPI_Psend_init(message, send_partitions, 1, xfer_type, dest,
                    tag, MPI_COMM_WORLD, info, &request);
     MPI_Start(&request);
-
-    send_args.request = &request;
-
 #if defined(OMP)
 #pragma omp parallel num_threads(conf.num_threads)
 #pragma omp single
 #endif
     for (int i = 0; i < send_partitions; ++i) {
-      send_args.partition = i;
-      partix_task(&send_task /*functor*/, &send_args /*capture*/);
+      send_args[i].request = &request;
+      send_args[i].partition_id = i;
+      partix_task(&send_task /*functor*/, &send_args[i] /*capture*/);
     }
     partix_taskwait();
     while (!flag) {
@@ -138,20 +137,17 @@ int main(int argc, char *argv[]) {
     }
     MPI_Request_free(&request);
   } else if (myrank == 1) {
-    MPI_Precv_init(message, recv_partitions, recv_partlength, xfer_type, source,
+    MPI_Precv_init(message, recv_partitions, 1, xfer_type, source,
                    tag, MPI_COMM_WORLD, info, &request);
     MPI_Start(&request);
-
-    recv_args.recv_partitions = recv_partitions;
-    recv_args.request = &request;
-
 #if defined(OMP)
 #pragma omp parallel num_threads(conf.num_threads)
 #pragma omp single
 #endif
     for (int i = 0; i < recv_partitions; i += 2) {
-      recv_args.partition = i;
-      partix_task(&recv_task /*functor*/, &recv_args /*capture*/);
+      recv_args[i].request = &request;
+      recv_args[i].partition_id = i;
+      partix_task(&recv_task /*functor*/, &recv_args[i] /*capture*/);
     }
     partix_taskwait();
 
@@ -162,6 +158,9 @@ int main(int argc, char *argv[]) {
     }
     MPI_Request_free(&request);
   }
+
+  free(send_args);
+  free(recv_args);
   MPI_Finalize();
   partix_library_finalize();
 

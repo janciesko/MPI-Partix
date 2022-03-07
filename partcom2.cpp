@@ -44,17 +44,19 @@
 
 #include "mpi.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 #include <partix.h>
 
 /* My task args */
 typedef struct {
   MPI_Request *request;
+  int partition_id;
 } task_args_t;
 
 void task(partix_task_args_t *args) {
   task_args_t *task_args = (task_args_t *)args->user_task_args;
-  MPI_Pready(partix_executor_id(), *task_args->request);
+  MPI_Pready(task_args->partition_id, *task_args->request);
 };
 
 int main(int argc, char *argv[]) {
@@ -64,6 +66,7 @@ int main(int argc, char *argv[]) {
 
   MPI_Count partitions = conf.num_partitions;
   MPI_Count partlength = conf.num_partlength;
+
   double message[partitions * partlength];
 
   int count = 1, source = 0, dest = 1, tag = 1, flag = 0;
@@ -77,23 +80,26 @@ int main(int argc, char *argv[]) {
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
   if (provided < MPI_THREAD_MULTIPLE)
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
   MPI_Type_contiguous(partlength, MPI_DOUBLE, &xfer_type);
   MPI_Type_commit(&xfer_type);
 
-  task_args_t args;
-  args.request = &request;
+  task_args_t * args = (task_args_t *) calloc (conf.num_partitions, sizeof(task_args_t)) ;
 
   if (myrank == 0) {
-    MPI_Psend_init(message, partitions, partlength, xfer_type, dest, tag,
+    MPI_Psend_init(message, partitions, 1, xfer_type, dest, tag,
                    MPI_COMM_WORLD, info, &request);
     MPI_Start(&request);
 #if defined(OMP)
 #pragma omp parallel num_threads(conf.num_threads)
 #pragma omp single
 #endif
-    for (int i = 0; i < partitions; ++i)
-      partix_task(&task /*functor*/, &args /*capture*/);
+    for (int i = 0; i < partitions; ++i){
+      args[i].request = &request;
+      args[i].partition_id = i;
+      partix_task(&task /*functor*/, &args[i] /*capture*/);
+    }
     partix_taskwait();
     while (!flag) {
       /* Do useful work */
@@ -102,7 +108,7 @@ int main(int argc, char *argv[]) {
     }
     MPI_Request_free(&request);
   } else if (myrank == 1) {
-    MPI_Precv_init(message, partitions, partlength, xfer_type, source, tag,
+    MPI_Precv_init(message, partitions, 1, xfer_type, source, tag,
                    MPI_COMM_WORLD, info, &request);
     MPI_Start(&request);
     while (!flag) {
@@ -112,8 +118,9 @@ int main(int argc, char *argv[]) {
     }
     MPI_Request_free(&request);
   }
+
+  free(args);
   MPI_Finalize();
   partix_library_finalize();
-
   return 0;
 }

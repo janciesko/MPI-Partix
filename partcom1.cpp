@@ -60,10 +60,13 @@ int main(int argc, char *argv[]) {
   int myrank, i;
   int provided;
   MPI_Request request;
+
   MPI_Init_thread(&argc, &argv, MPI_THREAD_SERIALIZED, &provided);
   if (provided < MPI_THREAD_SERIALIZED)
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+  
   if (myrank == 0) {
     MPI_Psend_init(message, partitions, partlength, MPI_DOUBLE, dest, tag,
                    MPI_COMM_WORLD, MPI_INFO_NULL, &request);

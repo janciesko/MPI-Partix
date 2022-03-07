@@ -74,7 +74,7 @@ void task_send(partix_task_args_t *args) {
                   comm, &request);
 
   assert(ret == 0);
-  ret = MPI_Waitall(1, &request, MPI_STATUSES_IGNORE);
+  ret = MPI_Wait(&request, MPI_STATUSES_IGNORE);
   assert(ret == 0);
   partix_mutex_enter();
   reduction_var += task_args->some_data;
@@ -91,7 +91,7 @@ void task_recv(partix_task_args_t *args) {
   ret = MPI_Irecv(&tmp, 1, MPI_INT, task_args->target, 0,
                   comm, &request);
   assert(ret == 0);
-  ret = MPI_Waitall(1, &request, MPI_STATUSES_IGNORE);
+  ret = MPI_Wait(&request, MPI_STATUSES_IGNORE);
   assert(ret == 0);
   partix_mutex_enter();
   reduction_var += tmp;
@@ -105,7 +105,10 @@ int main(int argc, char *argv[]) {
   task_args_t task_args;
   task_args.some_data = DEFAULT_VALUE;
 
-  MPI_Init(&argc, &argv);
+  int provided;
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE,
+                  &provided);
+  assert(provided == MPI_THREAD_MULTIPLE);
 
   int comm_rank;
   int comm_size;
@@ -133,7 +136,7 @@ int main(int argc, char *argv[]) {
   }
   partix_taskwait();
 
-  assert(reduction_var == DEFAULT_VALUE * (conf.num_tasks) * conf.comm_size);
+  assert(reduction_var == DEFAULT_VALUE * conf.num_tasks);
 
   partix_library_finalize();
   MPI_Finalize();
