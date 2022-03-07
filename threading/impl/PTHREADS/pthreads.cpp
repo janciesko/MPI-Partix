@@ -45,7 +45,7 @@
 #include <cassert>
 #include <map>
 #include <thread.h>
-#include<malloc.h>
+#include <malloc.h>
 
 #define SUCCEED(val) assert(val == 0)
 #define MAX_THREADS 1048576
