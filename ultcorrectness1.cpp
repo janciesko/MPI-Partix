@@ -49,21 +49,52 @@
 
 #include <partix.h>
 
+#define COMM_TYPE_PT2PT 0
+#define COMM_TYPE_PUTGET 1 /*TBD*/
+
 #define DEFAULT_VALUE 123
+#define comm MPI_COMM_WORLD
 
 int reduction_var = 0;
 
 /* My task args */
 typedef struct {
   int some_data;
+  int target;
 } task_args_t;
 
-__attribute__((noinline)) void task(partix_task_args_t *args) {
+void task_send(partix_task_args_t *args) {
+  int ret;
+  MPI_Request request;
+  
   task_args_t *task_args = (task_args_t *)args->user_task_args;
-  printf("Test1: Printing: %i on task %u.\n", task_args->some_data,
-         partix_executor_id());
+  printf("ULTcorrectness1: Sending: %i on task %u.\n", task_args->some_data,
+         partix_executor_id());  
+  ret = MPI_Isend(&task_args->some_data, 1, MPI_INT, task_args->target, 0,
+                  comm, &request);
+
+  assert(ret == 0);
+  ret = MPI_Waitall(1, &request, MPI_STATUSES_IGNORE);
+  assert(ret == 0);
   partix_mutex_enter();
   reduction_var += task_args->some_data;
+  partix_mutex_exit(); 
+};
+
+void task_recv(partix_task_args_t *args) {
+  int ret, tmp;
+  MPI_Request request;
+
+  task_args_t *task_args = (task_args_t *)args->user_task_args;
+  printf("ULTcorrectness1: Receiving: %i on task %u.\n", task_args->some_data,
+         partix_executor_id());
+  ret = MPI_Irecv(&tmp, 1, MPI_INT, task_args->target, 0,
+                  comm, &request);
+  assert(ret == 0);
+  ret = MPI_Waitall(1, &request, MPI_STATUSES_IGNORE);
+  assert(ret == 0);
+  partix_mutex_enter();
+  reduction_var += tmp;
   partix_mutex_exit();
 };
 
@@ -74,16 +105,33 @@ int main(int argc, char *argv[]) {
   task_args_t task_args;
   task_args.some_data = DEFAULT_VALUE;
 
+  int comm_rank;
+  int comm_size;
+
+  MPI_Comm_rank(MPI_COMM_WORLD, &comm_rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
+
+  //Requires two ranks
+  assert (conf.comm_size == 2);
+  //Requires even number of tasks
+  assert (conf.num_tasks % 2 == 0);
+
+  task_args.some_data = DEFAULT_VALUE;
+  task_args.target = comm_rank ^ 1;
+
 #if defined(OMP)
 #pragma omp parallel num_threads(conf.num_threads)
 #pragma omp single
 #endif
   for (int i = 0; i < conf.num_tasks; ++i) {
-    partix_task(&task /*functor*/, &task_args /*capture by ref*/);
+    if(i%2)
+      partix_task(&task_send /*functor*/, &task_args /*capture by ref*/);
+    else
+      partix_task(&task_recv /*functor*/, &task_args /*capture by ref*/);
   }
   partix_taskwait();
 
-  assert(reduction_var == DEFAULT_VALUE * conf.num_tasks);
+  assert(reduction_var == DEFAULT_VALUE * (conf.num_tasks) * conf.comm_size);
 
   partix_library_finalize();
   return 0;
