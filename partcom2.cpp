@@ -43,8 +43,8 @@
 */
 
 #include "mpi.h"
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <partix.h>
 
@@ -85,17 +85,18 @@ int main(int argc, char *argv[]) {
   MPI_Type_contiguous(partlength, MPI_DOUBLE, &xfer_type);
   MPI_Type_commit(&xfer_type);
 
-  task_args_t * args = (task_args_t *) calloc (conf.num_partitions, sizeof(task_args_t)) ;
+  task_args_t *args =
+      (task_args_t *)calloc(conf.num_partitions, sizeof(task_args_t));
 
   if (myrank == 0) {
-    MPI_Psend_init(message, partitions, 1, xfer_type, dest, tag,
-                   MPI_COMM_WORLD, info, &request);
+    MPI_Psend_init(message, partitions, 1, xfer_type, dest, tag, MPI_COMM_WORLD,
+                   info, &request);
     MPI_Start(&request);
 #if defined(OMP)
 #pragma omp parallel num_threads(conf.num_threads)
 #pragma omp single
 #endif
-    for (int i = 0; i < partitions; ++i){
+    for (int i = 0; i < partitions; ++i) {
       args[i].request = &request;
       args[i].partition_id = i;
       partix_task(&task /*functor*/, &args[i] /*capture*/);

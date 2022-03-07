@@ -45,8 +45,8 @@
 #include "mpi.h"
 #include <cassert>
 #include <cstdio>
-#include <limits>
 #include <cstdlib>
+#include <limits>
 
 #include <partix.h>
 
@@ -60,7 +60,7 @@ typedef struct {
 } task_args_t;
 
 void task(partix_task_args_t *args) {
-  //Do nothing
+  // Do nothing
   task_args_t *task_args = (task_args_t *)args->user_task_args;
   partix_mutex_enter();
   reduction_var += task_args->some_data;
@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
 #pragma omp parallel num_threads(conf.num_threads)
 #pragma omp single
 #endif
-  do{
+  do {
     reduction_var = 0;
     num_tasks = next_num_tasks;
     double start_time = MPI_Wtime();
@@ -92,14 +92,14 @@ int main(int argc, char *argv[]) {
     }
     partix_taskwait();
     double end_time = MPI_Wtime();
-    
+
     if (next_num_tasks * 2 > std::numeric_limits<int>::max() / 4)
-        break;
+      break;
     next_num_tasks *= 2;
-    time = (end_time - start_time)  * 1.0e3 /*msec*/;
+    time = (end_time - start_time) * 1.0e3 /*msec*/;
   } while (time <= 200.0);
 
-  printf("%f[ms] per task (%i tasks executed)\n", time /num_tasks, num_tasks );
+  printf("%f[ms] per task (%i tasks executed)\n", time / num_tasks, num_tasks);
   assert(reduction_var == DEFAULT_VALUE * num_tasks);
   partix_library_finalize();
   return 0;

@@ -114,12 +114,14 @@ int main(int argc, char *argv[]) {
   MPI_Type_commit(&send_xfer_type);
   MPI_Type_commit(&recv_xfer_type);
 
-  send_task_args_t * send_args = (send_task_args_t *) calloc (send_partitions, sizeof(send_task_args_t)) ;
-  recv_task_args_t * recv_args = (recv_task_args_t *) calloc (recv_partitions, sizeof(recv_task_args_t)) ;
+  send_task_args_t *send_args =
+      (send_task_args_t *)calloc(send_partitions, sizeof(send_task_args_t));
+  recv_task_args_t *recv_args =
+      (recv_task_args_t *)calloc(recv_partitions, sizeof(recv_task_args_t));
 
   if (myrank == 0) {
-    MPI_Psend_init(message, send_partitions, 1, send_xfer_type, dest,
-                   tag, MPI_COMM_WORLD, info, &request);
+    MPI_Psend_init(message, send_partitions, 1, send_xfer_type, dest, tag,
+                   MPI_COMM_WORLD, info, &request);
     MPI_Start(&request);
 #if defined(OMP)
 #pragma omp parallel num_threads(conf.num_threads)
@@ -138,8 +140,8 @@ int main(int argc, char *argv[]) {
     }
     MPI_Request_free(&request);
   } else if (myrank == 1) {
-    MPI_Precv_init(message, recv_partitions, 1, recv_xfer_type, source,
-                   tag, MPI_COMM_WORLD, info, &request);
+    MPI_Precv_init(message, recv_partitions, 1, recv_xfer_type, source, tag,
+                   MPI_COMM_WORLD, info, &request);
     MPI_Start(&request);
 #if defined(OMP)
 #pragma omp parallel num_threads(conf.num_threads)

@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
-  
+
   if (myrank == 0) {
     MPI_Psend_init(message, partitions, partlength, MPI_DOUBLE, dest, tag,
                    MPI_COMM_WORLD, MPI_INFO_NULL, &request);
