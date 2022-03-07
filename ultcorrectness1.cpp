@@ -105,6 +105,8 @@ int main(int argc, char *argv[]) {
   task_args_t task_args;
   task_args.some_data = DEFAULT_VALUE;
 
+  MPI_Init(&argc, &argv);
+
   int comm_rank;
   int comm_size;
 
@@ -134,5 +136,6 @@ int main(int argc, char *argv[]) {
   assert(reduction_var == DEFAULT_VALUE * (conf.num_tasks) * conf.comm_size);
 
   partix_library_finalize();
+  MPI_Finalize();
   return 0;
 }
