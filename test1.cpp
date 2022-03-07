@@ -60,7 +60,7 @@ typedef struct {
 
 void task(partix_task_args_t *args) {
   task_args_t *task_args = (task_args_t *)args->user_task_args;
-  printf("Test1: Printing: %i on task %u.\n", task_args->some_data,
+  printf("Test1: Printing: %i on thread %u.\n", task_args->some_data,
          partix_executor_id());
   partix_mutex_enter();
   reduction_var += task_args->some_data;
