@@ -68,7 +68,7 @@ void recv_task(partix_task_args_t *args) {
 
   int partition_id = task_args->partition_id;
 
-  while (flag1 == 0 || flag1 == 0) {
+  while (flag1 == 0 || flag2 == 0) {
     /* test partition_id #partition_id and #partition_id+1 */
     MPI_Parrived(*task_args->request, partition_id, &flag1);
     if (partition_id + 1 < task_args->recv_partitions) {
