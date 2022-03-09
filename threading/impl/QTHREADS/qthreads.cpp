@@ -140,6 +140,7 @@ int partix_executor_id(void) {
 
 void partix_library_init(void) {
   debug("partix_library_init");
+  qthread_initialize();
   partix_mutex_init(&global_mutex);
   partix_mutex_init(&context_mutex);
 }
@@ -148,6 +149,7 @@ void partix_library_finalize(void) {
   debug("partix_library_finalize");
   partix_mutex_destroy(&global_mutex);
   partix_mutex_destroy(&context_mutex);
+  qthread_finalize();
 }
 
 void partix_thread_create(void (*f)(partix_task_args_t *), void *args,
