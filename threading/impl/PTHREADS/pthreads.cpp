@@ -42,7 +42,7 @@
 //@HEADER
 */
 
-#include <cassert>
+#include <assert>
 #include <map>
 #include <thread.h>
 #include <malloc.h>

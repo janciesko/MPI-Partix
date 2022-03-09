@@ -48,6 +48,7 @@
 
 #include <thread.h>
 
+partix_mutex_t global_mutex;
 partix_config_t * global_conf;
 
 #define SUCCEED(val) assert(val == ABT_SUCCESS)
@@ -236,7 +237,7 @@ void partix_library_init(void) {
   SUCCEED(ret);
 }
 
-void partix_thread_library_finalize(void) {
+void partix_library_finalize(void) {
   int ret;
   /* Join secondary execution streams. */
   for (int i = 1; i < g_abt_global.num_xstreams; i++) {
@@ -253,6 +254,8 @@ void partix_thread_library_finalize(void) {
   ret = ABT_xstream_barrier_free(&g_abt_global.xstream_barrier);
   SUCCEED(ret);
 
+  partix_mutex_destroy(&global_mutex);
+  
   ret = ABT_finalize();
   SUCCEED(ret);
   free(g_abt_global.xstreams);
@@ -264,6 +267,49 @@ void partix_thread_library_finalize(void) {
   free(g_abt_global.schedulers);
   g_abt_global.schedulers = NULL;
 }
+
+void partix_mutex_enter() {
+  debug("partix_mutex_enter");
+  int ret = ABT_mutex_lock(global_mutex);
+  SUCCEED(ret);
+}
+
+void partix_mutex_exit() {
+  debug("partix_mutex_exit");
+  int ret = ABT_mutex_unlock(global_mutex);
+  SUCCEED(ret);
+}
+
+void partix_mutex_enter(partix_mutex_t *m) {
+  debug("partix_mutex_enter");
+  int ret = ABT_mutex_lock(*m);
+  SUCCEED(ret);
+}
+
+void partix_mutex_exit(partix_mutex_t *m) {
+  debug("partix_mutex_exit");
+  int ret = ABT_mutex_unlock(*m);
+  SUCCEED(ret);
+}
+
+void partix_mutex_init(partix_mutex_t *m) { 
+  int ret = ABT_mutex_create(m);
+  SUCCEED(ret);
+}
+
+void partix_mutex_destroy(partix_mutex_t *m) {
+  int ret = ABT_mutex_free(m);
+  SUCCEED(ret);
+}
+
+int partix_executor_id(void) {
+  debug("partix_executor_id");
+  ABT_thread thread;
+  ABT_unit_id thread_id;
+  ABT_thread_self(&thread);
+  ABT_thread_get_id(thread, &thread_id);
+  return (int)thread_id;
+};
 
 void partix_thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier) {
   int ret;
@@ -283,14 +329,14 @@ void partix_thread_barrier_destroy(barrier_handle_t *p_barrier) {
   SUCCEED(ret);
 }
 
-void partix_thread_create(void (*f)(void *), void *arg,
-                          thread_handle_t *p_thread) {
+__attribute__((noinline)) 
+void partix_task(void (*f)(partix_task_args_t *), void *user_args) {
   int ret, rank;
   ret = ABT_self_get_xstream_rank(&rank);
   SUCCEED(ret);
   ABT_pool pool = g_abt_global.shared_pools[rank];
   ret =
-      ABT_thread_create(pool, f, arg, ABT_THREAD_ATTR_NULL, &p_thread->thread);
+      ABT_thread_create(pool, f, user_args, ABT_THREAD_ATTR_NULL, &p_thread->thread);
   SUCCEED(ret);
 }
 
