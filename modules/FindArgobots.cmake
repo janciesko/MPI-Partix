@@ -8,4 +8,6 @@ set_target_properties(Argobots PROPERTIES
     INTERFACE_LINK_LIBRARIES ${abt_lib_found}
     INTERFACE_INCLUDE_DIRECTORIES ${abt_headers_found}
   )
+else()
+  message(WARNING "Argobots not found")
 endif()

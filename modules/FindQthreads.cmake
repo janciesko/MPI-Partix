@@ -8,4 +8,6 @@ set_target_properties(Qthreads PROPERTIES
     INTERFACE_LINK_LIBRARIES ${qthreads_lib_found}
     INTERFACE_INCLUDE_DIRECTORIES ${qthreads_headers_found}
   )
+else()
+  message(WARNING "Qthreads not found")
 endif()
