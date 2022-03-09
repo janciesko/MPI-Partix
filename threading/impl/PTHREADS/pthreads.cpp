@@ -154,15 +154,14 @@ void partix_library_finalize(void) {
   partix_mutex_destroy(&context_mutex);
 }
 
-__attribute__((noinline)) void
-partix_thread_create(void (*f)(partix_task_args_t *), void *args,
+void partix_thread_create(void (*f)(partix_task_args_t *), void *args,
                      pthread_t *handle) {
   debug("partix_thread_create");
-  int ret = pthread_create(handle, NULL, (void *(*)(void *))f, args);
+  int ret = pthread_create(handle, NULL, (void (*)(void *))f, args);
   SUCCEED(ret);
 }
 
-__attribute__((noinline)) void partix_thread_join(pthread_t handle) {
+void partix_thread_join(pthread_t handle) {
   debug("partix_thread_join");
   int ret = pthread_join(handle, NULL);
   SUCCEED(ret);

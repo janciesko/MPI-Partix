@@ -43,15 +43,29 @@
 */
 
 #include <assert.h>
+#include <map>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <thread.h>
 
-partix_mutex_t global_mutex;
-partix_config_t * global_conf;
+#define SUCCEED(val) assert(val == 0)
+#define MAX_THREADS 1048576
 
-#define SUCCEED(val) assert(val == ABT_SUCCESS)
+partix_mutex_t global_mutex;
+partix_mutex_t context_mutex;
+partix_config_t *global_conf;
+
+typedef struct {
+  ABT_thread thread;
+  partix_task_args_t args;
+} thread_handle_t;
+
+/* We need this to implement taskwait*/
+typedef struct {
+  thread_handle_t threadHandle[MAX_THREADS];
+  int context_task_counter;
+} partix_handle_t;
 
 typedef struct abt_global_t {
   int num_xstreams;
@@ -64,13 +78,45 @@ typedef struct abt_global_t {
 } abt_global_t;
 abt_global_t g_abt_global;
 
-struct thread_handle_t {
-  ABT_thread thread;
-};
-
 struct barrier_handle_t {
   ABT_barrier barrier;
 };
+
+typedef std::map<size_t, partix_handle_t *> partix_context_map_t;
+partix_context_map_t context_map;
+
+__attribute__((noinline)) size_t get_context() {
+  debug("get_context_outer");
+  const unsigned int level = 2;
+  size_t addr =
+      (size_t)__builtin_extract_return_addr(__builtin_frame_address(level));
+  return addr;
+}
+
+thread_handle_t *register_task(size_t context) {
+  partix_context_map_t::iterator it;
+  partix_mutex_enter(&context_mutex);
+  it = context_map.find(context);
+  if (it != context_map.end()) {
+    partix_handle_t *context_handle = it->second;
+    debug("register_task, it != context_map.end()");
+    partix_mutex_exit(&context_mutex);
+    return &context_handle
+                ->threadHandle[context_handle->context_task_counter++];
+  } else {
+    partix_handle_t *context_handle =
+        (partix_handle_t *)calloc(1, sizeof(partix_handle_t));
+    const auto it_insert = context_map.insert(
+        std::pair<size_t, partix_handle_t *>(context, context_handle));
+    if (it_insert.second) { /*Insert successful*/
+    }
+    debug("register_task, it == context_map.end()");
+    partix_mutex_exit(&context_mutex);
+    return &context_handle
+                ->threadHandle[context_handle->context_task_counter++];
+  }
+  assert(false); // DO NOT REACH HERE
+}
 
 inline uint32_t xorshift_rand32(uint32_t *p_seed) {
   /* George Marsaglia, "Xorshift RNGs", Journal of Statistical Software,
@@ -82,7 +128,6 @@ inline uint32_t xorshift_rand32(uint32_t *p_seed) {
   *p_seed = seed;
   return seed;
 }
-
 
 int partix_sched_init(ABT_sched sched, ABT_sched_config config) {
   return ABT_SUCCESS;
@@ -163,6 +208,67 @@ void partix_sched_run(ABT_sched sched) {
 
 int partix_sched_free(ABT_sched sched) { return ABT_SUCCESS; }
 
+void partix_mutex_enter() {
+  debug("partix_mutex_enter");
+  int ret = ABT_mutex_lock(global_mutex);
+  SUCCEED(ret);
+}
+
+void partix_mutex_exit() {
+  debug("partix_mutex_exit");
+  int ret = ABT_mutex_unlock(global_mutex);
+  SUCCEED(ret);
+}
+
+void partix_mutex_enter(partix_mutex_t *m) {
+  debug("partix_mutex_enter");
+  int ret = ABT_mutex_lock(*m);
+  SUCCEED(ret);
+}
+
+void partix_mutex_exit(partix_mutex_t *m) {
+  debug("partix_mutex_exit");
+  int ret = ABT_mutex_unlock(*m);
+  SUCCEED(ret);
+}
+
+void partix_mutex_init(partix_mutex_t *m) {
+  int ret = ABT_mutex_create(m);
+  SUCCEED(ret);
+}
+
+void partix_mutex_destroy(partix_mutex_t *m) {
+  int ret = ABT_mutex_free(m);
+  SUCCEED(ret);
+}
+
+void partix_barrier_init(int num_waiters, barrier_handle_t *p_barrier) {
+  int ret;
+  ret = ABT_barrier_create(num_waiters, &p_barrier->barrier);
+  SUCCEED(ret);
+}
+
+void partix_barrier_wait(barrier_handle_t *p_barrier) {
+  int ret;
+  ret = ABT_barrier_wait(p_barrier->barrier);
+  SUCCEED(ret);
+}
+
+void partix_barrier_destroy(barrier_handle_t *p_barrier) {
+  int ret;
+  ret = ABT_barrier_free(&p_barrier->barrier);
+  SUCCEED(ret);
+}
+
+int partix_executor_id(void) {
+  debug("partix_executor_id");
+  ABT_thread thread;
+  ABT_unit_id thread_id;
+  ABT_thread_self(&thread);
+  ABT_thread_get_id(thread, &thread_id);
+  return (int)thread_id;
+};
+
 void partix_library_init(void) {
   int ret;
   ret = ABT_init(0, 0);
@@ -173,8 +279,7 @@ void partix_library_init(void) {
     num_xstreams = atoi(getenv("ABT_NUM_XSTREAMS"));
     if (num_xstreams < 0)
       num_xstreams = 1;
-  }else
-  {
+  } else {
     num_xstreams = global_conf->num_threads;
   }
 
@@ -184,8 +289,10 @@ void partix_library_init(void) {
       (ABT_xstream *)malloc(sizeof(ABT_xstream) * num_xstreams);
   g_abt_global.shared_pools =
       (ABT_pool *)malloc(sizeof(ABT_pool) * num_xstreams);
-  g_abt_global.private_pools = (ABT_pool *)malloc(sizeof(ABT_pool) * num_xstreams);
-  g_abt_global.schedulers = (ABT_sched *)malloc(sizeof(ABT_sched) * num_xstreams);
+  g_abt_global.private_pools =
+      (ABT_pool *)malloc(sizeof(ABT_pool) * num_xstreams);
+  g_abt_global.schedulers =
+      (ABT_sched *)malloc(sizeof(ABT_sched) * num_xstreams);
   ret = ABT_xstream_barrier_create(num_xstreams, &g_abt_global.xstream_barrier);
   SUCCEED(ret);
   /* Create pools. */
@@ -221,7 +328,8 @@ void partix_library_init(void) {
 
   /* Create secondary execution streams. */
   for (int i = 1; i < num_xstreams; i++) {
-    ret = ABT_xstream_create(g_abt_global.schedulers[i], &g_abt_global.xstreams[i]);
+    ret = ABT_xstream_create(g_abt_global.schedulers[i],
+                             &g_abt_global.xstreams[i]);
     SUCCEED(ret);
   }
 
@@ -255,7 +363,7 @@ void partix_library_finalize(void) {
   SUCCEED(ret);
 
   partix_mutex_destroy(&global_mutex);
-  
+
   ret = ABT_finalize();
   SUCCEED(ret);
   free(g_abt_global.xstreams);
@@ -268,80 +376,51 @@ void partix_library_finalize(void) {
   g_abt_global.schedulers = NULL;
 }
 
-void partix_mutex_enter() {
-  debug("partix_mutex_enter");
-  int ret = ABT_mutex_lock(global_mutex);
-  SUCCEED(ret);
-}
-
-void partix_mutex_exit() {
-  debug("partix_mutex_exit");
-  int ret = ABT_mutex_unlock(global_mutex);
-  SUCCEED(ret);
-}
-
-void partix_mutex_enter(partix_mutex_t *m) {
-  debug("partix_mutex_enter");
-  int ret = ABT_mutex_lock(*m);
-  SUCCEED(ret);
-}
-
-void partix_mutex_exit(partix_mutex_t *m) {
-  debug("partix_mutex_exit");
-  int ret = ABT_mutex_unlock(*m);
-  SUCCEED(ret);
-}
-
-void partix_mutex_init(partix_mutex_t *m) { 
-  int ret = ABT_mutex_create(m);
-  SUCCEED(ret);
-}
-
-void partix_mutex_destroy(partix_mutex_t *m) {
-  int ret = ABT_mutex_free(m);
-  SUCCEED(ret);
-}
-
-int partix_executor_id(void) {
-  debug("partix_executor_id");
-  ABT_thread thread;
-  ABT_unit_id thread_id;
-  ABT_thread_self(&thread);
-  ABT_thread_get_id(thread, &thread_id);
-  return (int)thread_id;
-};
-
-void partix_thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier) {
-  int ret;
-  ret = ABT_barrier_create(num_waiters, &p_barrier->barrier);
-  SUCCEED(ret);
-}
-
-void partix_thread_barrier_wait(barrier_handle_t *p_barrier) {
-  int ret;
-  ret = ABT_barrier_wait(p_barrier->barrier);
-  SUCCEED(ret);
-}
-
-void partix_thread_barrier_destroy(barrier_handle_t *p_barrier) {
-  int ret;
-  ret = ABT_barrier_free(&p_barrier->barrier);
-  SUCCEED(ret);
-}
-
-__attribute__((noinline)) 
-void partix_task(void (*f)(partix_task_args_t *), void *user_args) {
+void partix_thread_create(void (*f)(partix_task_args_t *), void *args,
+                          ABT_thread *handle) {
   int ret, rank;
   ret = ABT_self_get_xstream_rank(&rank);
   SUCCEED(ret);
   ABT_pool pool = g_abt_global.shared_pools[rank];
-  ret =
-      ABT_thread_create(pool, f, user_args, ABT_THREAD_ATTR_NULL, &p_thread->thread);
+  ret = ABT_thread_create(pool, (void (*)(void *))f, args, ABT_THREAD_ATTR_NULL,
+                          handle);
   SUCCEED(ret);
 }
 
-void partix_thread_join(thread_handle_t *p_thread) {
+void partix_thread_join(ABT_thread handle) {
   int ret;
-  ret = ABT_thread_free(&p_thread->thread);
+  ret = ABT_thread_free(&handle);
   SUCCEED(ret);
+}
+
+__attribute__((noinline)) void partix_task(void (*f)(partix_task_args_t *),
+                                           void *user_args) {
+  size_t context = get_context();
+  thread_handle_t *threadhandle = register_task(context);
+  partix_task_args_t *partix_args = &threadhandle->args;
+  partix_args->user_task_args = user_args;
+  partix_args->conf = global_conf;
+  debug("partix_task");
+  partix_thread_create(f, partix_args, &threadhandle->thread);
+}
+
+__attribute__((noinline)) void partix_taskwait() {
+  size_t context = get_context();
+  partix_context_map_t::iterator it;
+  it = context_map.find(context);
+  if (it == context_map.end()) {
+    debug("partix_taskwait, it == context_map.end()");
+    return;
+  }
+  debug("partix_taskwait, it != context_map.end()");
+
+  partix_handle_t *context_handle = it->second;
+  for (int i = 0; i < context_handle->context_task_counter; ++i) {
+    debug("partix_taskwait, partix_thread_join");
+    partix_thread_join(context_handle->threadHandle[i].thread);
+  }
+  free(context_handle);
+  partix_mutex_enter(&context_mutex);
+  context_map.erase(it);
+  partix_mutex_exit(&context_mutex);
 }
