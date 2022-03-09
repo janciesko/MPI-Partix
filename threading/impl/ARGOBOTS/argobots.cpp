@@ -46,19 +46,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <abt.h>
 #include <thread.h>
 
+partix_config_t * global_conf;
+
+#define SUCCEED(val) assert(val == ABT_SUCCESS)
+
 typedef struct abt_global_t {
-  char pad1[64];
   int num_xstreams;
-  int num_vcis;
   ABT_xstream *xstreams;
-  ABT_pool *shared_pools, *priv_pools;
-  ABT_sched *scheds;
+  ABT_pool *shared_pools;
+  ABT_pool *private_pools;
+  ABT_sched *schedulers;
   ABT_xstream_barrier xstream_barrier;
   int first_init;
-  char pad2[64];
 } abt_global_t;
 abt_global_t g_abt_global;
 
@@ -81,8 +82,6 @@ inline uint32_t xorshift_rand32(uint32_t *p_seed) {
   return seed;
 }
 
-void partix_parallel_for(void (*f)(void), task_args_t &task_args,
-                         int num_tasks) {}
 
 int partix_sched_init(ABT_sched sched, ABT_sched_config config) {
   return ABT_SUCCESS;
@@ -100,7 +99,6 @@ void partix_sched_run(ABT_sched sched) {
     for (int i = rank; i < 64; i += g_abt_global.num_xstreams) {
       my_vcimask += ((uint64_t)1) << ((uint64_t)i);
     }
-    MPIX_Set_exp_info(MPIX_INFO_TYPE_VCIMASK, &my_vcimask, 0);
     ABT_xstream_barrier_wait(g_abt_global.xstream_barrier);
     g_abt_global.first_init = 1;
   }
@@ -164,79 +162,78 @@ void partix_sched_run(ABT_sched sched) {
 
 int partix_sched_free(ABT_sched sched) { return ABT_SUCCESS; }
 
-void partix_thread_library_init(void) {
+void partix_library_init(void) {
   int ret;
   ret = ABT_init(0, 0);
-  assert(ret == ABT_SUCCESS);
+  SUCCEED(ret);
 
-  int num_xstreams = 1;
+  int num_xstreams;
   if (getenv("ABT_NUM_XSTREAMS")) {
     num_xstreams = atoi(getenv("ABT_NUM_XSTREAMS"));
     if (num_xstreams < 0)
       num_xstreams = 1;
-  }
-  int num_vcis = 1;
-  if (getenv("MPIR_CVAR_CH4_NUM_VCIS")) {
-    num_vcis = atoi(getenv("MPIR_CVAR_CH4_NUM_VCIS"));
+  }else
+  {
+    num_xstreams = global_conf->num_threads;
   }
 
   g_abt_global.num_xstreams = num_xstreams;
-  g_abt_global.num_vcis = num_vcis;
+
   g_abt_global.xstreams =
       (ABT_xstream *)malloc(sizeof(ABT_xstream) * num_xstreams);
   g_abt_global.shared_pools =
       (ABT_pool *)malloc(sizeof(ABT_pool) * num_xstreams);
-  g_abt_global.priv_pools = (ABT_pool *)malloc(sizeof(ABT_pool) * num_xstreams);
-  g_abt_global.scheds = (ABT_sched *)malloc(sizeof(ABT_sched) * num_xstreams);
+  g_abt_global.private_pools = (ABT_pool *)malloc(sizeof(ABT_pool) * num_xstreams);
+  g_abt_global.schedulers = (ABT_sched *)malloc(sizeof(ABT_sched) * num_xstreams);
   ret = ABT_xstream_barrier_create(num_xstreams, &g_abt_global.xstream_barrier);
-  assert(ret == ABT_SUCCESS);
+  SUCCEED(ret);
   /* Create pools. */
   for (int i = 0; i < num_xstreams; i++) {
     ret = ABT_pool_create_basic(ABT_POOL_FIFO, ABT_POOL_ACCESS_MPMC, ABT_TRUE,
                                 &g_abt_global.shared_pools[i]);
-    assert(ret == ABT_SUCCESS);
+    SUCCEED(ret);
     ret = ABT_pool_create_basic(ABT_POOL_FIFO, ABT_POOL_ACCESS_MPMC, ABT_TRUE,
-                                &g_abt_global.priv_pools[i]);
-    assert(ret == ABT_SUCCESS);
+                                &g_abt_global.private_pools[i]);
+    SUCCEED(ret);
   }
   /* Create schedulers. */
   ABT_sched_def sched_def = {
       .type = ABT_SCHED_TYPE_ULT,
-      .init = sched_init,
-      .run = sched_run,
-      .free = sched_free,
+      .init = partix_sched_init,
+      .run = partix_sched_run,
+      .free = partix_sched_free,
       .get_migr_pool = NULL,
   };
   for (int i = 0; i < num_xstreams; i++) {
     ABT_pool *tmp = (ABT_pool *)malloc(sizeof(ABT_pool) * num_xstreams + 1);
     int pool_index = 0;
     tmp[pool_index++] = g_abt_global.shared_pools[i];
-    tmp[pool_index++] = g_abt_global.priv_pools[i];
+    tmp[pool_index++] = g_abt_global.private_pools[i];
     for (int j = 1; j < num_xstreams; j++) {
       tmp[pool_index++] = g_abt_global.shared_pools[(i + j) % num_xstreams];
     }
     ret = ABT_sched_create(&sched_def, num_xstreams + 1, tmp,
-                           ABT_SCHED_CONFIG_NULL, &g_abt_global.scheds[i]);
-    assert(ret == ABT_SUCCESS);
+                           ABT_SCHED_CONFIG_NULL, &g_abt_global.schedulers[i]);
+    SUCCEED(ret);
     free(tmp);
   }
 
   /* Create secondary execution streams. */
   for (int i = 1; i < num_xstreams; i++) {
-    ret = ABT_xstream_create(g_abt_global.scheds[i], &g_abt_global.xstreams[i]);
-    assert(ret == ABT_SUCCESS);
+    ret = ABT_xstream_create(g_abt_global.schedulers[i], &g_abt_global.xstreams[i]);
+    SUCCEED(ret);
   }
 
   /* Set up a primary execution stream. */
   ret = ABT_xstream_self(&g_abt_global.xstreams[0]);
-  assert(ret == ABT_SUCCESS);
+  SUCCEED(ret);
   ret = ABT_xstream_set_main_sched(g_abt_global.xstreams[0],
-                                   g_abt_global.scheds[0]);
-  assert(ret == ABT_SUCCESS);
+                                   g_abt_global.schedulers[0]);
+  SUCCEED(ret);
 
   /* Execute a scheduler once. */
   ret = ABT_self_yield();
-  assert(ret == ABT_SUCCESS);
+  SUCCEED(ret);
 }
 
 void partix_thread_library_finalize(void) {
@@ -244,61 +241,61 @@ void partix_thread_library_finalize(void) {
   /* Join secondary execution streams. */
   for (int i = 1; i < g_abt_global.num_xstreams; i++) {
     ret = ABT_xstream_join(g_abt_global.xstreams[i]);
-    assert(ret == ABT_SUCCESS);
+    SUCCEED(ret);
     ret = ABT_xstream_free(&g_abt_global.xstreams[i]);
-    assert(ret == ABT_SUCCESS);
+    SUCCEED(ret);
   }
   /* Free secondary execution streams' schedulers */
   for (int i = 1; i < g_abt_global.num_xstreams; i++) {
-    ret = ABT_sched_free(&g_abt_global.scheds[i]);
-    assert(ret == ABT_SUCCESS);
+    ret = ABT_sched_free(&g_abt_global.schedulers[i]);
+    SUCCEED(ret);
   }
   ret = ABT_xstream_barrier_free(&g_abt_global.xstream_barrier);
-  assert(ret == ABT_SUCCESS);
+  SUCCEED(ret);
 
   ret = ABT_finalize();
-  assert(ret == ABT_SUCCESS);
+  SUCCEED(ret);
   free(g_abt_global.xstreams);
   g_abt_global.xstreams = NULL;
   free(g_abt_global.shared_pools);
   g_abt_global.shared_pools = NULL;
-  free(g_abt_global.priv_pools);
-  g_abt_global.priv_pools = NULL;
-  free(g_abt_global.scheds);
-  g_abt_global.scheds = NULL;
+  free(g_abt_global.private_pools);
+  g_abt_global.private_pools = NULL;
+  free(g_abt_global.schedulers);
+  g_abt_global.schedulers = NULL;
 }
 
 void partix_thread_barrier_init(int num_waiters, barrier_handle_t *p_barrier) {
   int ret;
   ret = ABT_barrier_create(num_waiters, &p_barrier->barrier);
-  assert(ret == ABT_SUCCESS);
+  SUCCEED(ret);
 }
 
 void partix_thread_barrier_wait(barrier_handle_t *p_barrier) {
   int ret;
   ret = ABT_barrier_wait(p_barrier->barrier);
-  assert(ret == ABT_SUCCESS);
+  SUCCEED(ret);
 }
 
 void partix_thread_barrier_destroy(barrier_handle_t *p_barrier) {
   int ret;
   ret = ABT_barrier_free(&p_barrier->barrier);
-  assert(ret == ABT_SUCCESS);
+  SUCCEED(ret);
 }
 
 void partix_thread_create(void (*f)(void *), void *arg,
                           thread_handle_t *p_thread) {
   int ret, rank;
   ret = ABT_self_get_xstream_rank(&rank);
-  assert(ret == ABT_SUCCESS);
+  SUCCEED(ret);
   ABT_pool pool = g_abt_global.shared_pools[rank];
   ret =
       ABT_thread_create(pool, f, arg, ABT_THREAD_ATTR_NULL, &p_thread->thread);
-  assert(ret == ABT_SUCCESS);
+  SUCCEED(ret);
 }
 
 void partix_thread_join(thread_handle_t *p_thread) {
   int ret;
   ret = ABT_thread_free(&p_thread->thread);
-  assert(ret == ABT_SUCCESS);
+  SUCCEED(ret);
 }
