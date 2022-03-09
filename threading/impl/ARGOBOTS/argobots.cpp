@@ -42,14 +42,14 @@
 //@HEADER
 */
 
-#include <assert.h>
+#include <cassert.h>
 #include <map>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <thread.h>
 
-#define SUCCEED(val) assert(val == 0)
+#define SUCCEED(val) assert(val == ABT_SUCCESS)
 #define MAX_THREADS 1048576
 
 partix_mutex_t global_mutex;
@@ -138,6 +138,8 @@ void partix_sched_run(ABT_sched sched) {
   const int work_count_mask_remote = 256 - 1;
   const int work_count_mask_event = 8192 - 1;
   int rank;
+
+  debug("partix_sched_run");
   ABT_self_get_xstream_rank(&rank);
 
   uint64_t my_vcimask = 0;
@@ -233,29 +235,34 @@ void partix_mutex_exit(partix_mutex_t *m) {
 }
 
 void partix_mutex_init(partix_mutex_t *m) {
+  debug("partix_mutex_init");
   int ret = ABT_mutex_create(m);
   SUCCEED(ret);
 }
 
 void partix_mutex_destroy(partix_mutex_t *m) {
+  debug("partix_mutex_destroy");
   int ret = ABT_mutex_free(m);
   SUCCEED(ret);
 }
 
 void partix_barrier_init(int num_waiters, barrier_handle_t *p_barrier) {
   int ret;
+  debug("partix_barrier_init");
   ret = ABT_barrier_create(num_waiters, &p_barrier->barrier);
   SUCCEED(ret);
 }
 
 void partix_barrier_wait(barrier_handle_t *p_barrier) {
   int ret;
+  debug("partix_barrier_wait");
   ret = ABT_barrier_wait(p_barrier->barrier);
   SUCCEED(ret);
 }
 
 void partix_barrier_destroy(barrier_handle_t *p_barrier) {
   int ret;
+  debug("partix_barrier_destroy");
   ret = ABT_barrier_free(&p_barrier->barrier);
   SUCCEED(ret);
 }
@@ -271,6 +278,7 @@ int partix_executor_id(void) {
 
 void partix_library_init(void) {
   int ret;
+  debug("ABT_init");
   ret = ABT_init(0, 0);
   SUCCEED(ret);
 
@@ -297,9 +305,11 @@ void partix_library_init(void) {
   SUCCEED(ret);
   /* Create pools. */
   for (int i = 0; i < num_xstreams; i++) {
+    debug("ABT_pool_create_basic, shared");
     ret = ABT_pool_create_basic(ABT_POOL_FIFO, ABT_POOL_ACCESS_MPMC, ABT_TRUE,
                                 &g_abt_global.shared_pools[i]);
     SUCCEED(ret);
+    debug("ABT_pool_create_basic, private");
     ret = ABT_pool_create_basic(ABT_POOL_FIFO, ABT_POOL_ACCESS_MPMC, ABT_TRUE,
                                 &g_abt_global.private_pools[i]);
     SUCCEED(ret);
@@ -320,6 +330,8 @@ void partix_library_init(void) {
     for (int j = 1; j < num_xstreams; j++) {
       tmp[pool_index++] = g_abt_global.shared_pools[(i + j) % num_xstreams];
     }
+
+    debug("ABT_sched_create");
     ret = ABT_sched_create(&sched_def, num_xstreams + 1, tmp,
                            ABT_SCHED_CONFIG_NULL, &g_abt_global.schedulers[i]);
     SUCCEED(ret);
@@ -341,6 +353,7 @@ void partix_library_init(void) {
   SUCCEED(ret);
 
   /* Execute a scheduler once. */
+  debug("ABT_self_yield");
   ret = ABT_self_yield();
   SUCCEED(ret);
 }
@@ -359,11 +372,14 @@ void partix_library_finalize(void) {
     ret = ABT_sched_free(&g_abt_global.schedulers[i]);
     SUCCEED(ret);
   }
+
+  debug("ABT_xstream_barrier_free");
   ret = ABT_xstream_barrier_free(&g_abt_global.xstream_barrier);
   SUCCEED(ret);
 
   partix_mutex_destroy(&global_mutex);
 
+  debug("ABT_finalize");
   ret = ABT_finalize();
   SUCCEED(ret);
   free(g_abt_global.xstreams);
@@ -379,9 +395,11 @@ void partix_library_finalize(void) {
 void partix_thread_create(void (*f)(partix_task_args_t *), void *args,
                           ABT_thread *handle) {
   int ret, rank;
+  debug("ABT_self_get_xstream_rank");
   ret = ABT_self_get_xstream_rank(&rank);
   SUCCEED(ret);
   ABT_pool pool = g_abt_global.shared_pools[rank];
+  debug("ABT_thread_create");
   ret = ABT_thread_create(pool, (void (*)(void *))f, args, ABT_THREAD_ATTR_NULL,
                           handle);
   SUCCEED(ret);
@@ -389,6 +407,7 @@ void partix_thread_create(void (*f)(partix_task_args_t *), void *args,
 
 void partix_thread_join(ABT_thread handle) {
   int ret;
+  debug("partix_thread_join");
   ret = ABT_thread_free(&handle);
   SUCCEED(ret);
 }
