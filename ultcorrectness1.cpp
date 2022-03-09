@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
   MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
 
   //Requires two ranks
-  assert (conf.comm_size == 2);
+  assert (comm_size == 2);
   //Requires even number of tasks
   assert (conf.num_tasks % 2 == 0);
 
