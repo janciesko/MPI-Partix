@@ -42,7 +42,7 @@
 //@HEADER
 */
 
-#include <cassert.h>
+#include <assert.h>
 #include <map>
 #include <stdio.h>
 #include <stdlib.h>
@@ -282,6 +282,9 @@ void partix_library_init(void) {
   ret = ABT_init(0, 0);
   SUCCEED(ret);
 
+  partix_mutex_init(&global_mutex);
+  partix_mutex_init(&context_mutex);
+
   int num_xstreams;
   if (getenv("ABT_NUM_XSTREAMS")) {
     num_xstreams = atoi(getenv("ABT_NUM_XSTREAMS"));
@@ -378,6 +381,7 @@ void partix_library_finalize(void) {
   SUCCEED(ret);
 
   partix_mutex_destroy(&global_mutex);
+  partix_mutex_destroy(&context_mutex);
 
   debug("ABT_finalize");
   ret = ABT_finalize();
