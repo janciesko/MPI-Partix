@@ -48,7 +48,7 @@
 #include <malloc.h>
 
 #define SUCCEED(val) assert(val == 0)
-#define MAX_THREADS 1048576
+#define MAX_TASKS_PER_TW 4096
 
 partix_mutex_t global_mutex;
 partix_mutex_t context_mutex;
@@ -61,7 +61,7 @@ typedef struct {
 
 /* We need this to implement taskwait*/
 typedef struct {
-  thread_handle_t threadHandle[MAX_THREADS];
+  thread_handle_t threadHandle[MAX_TASKS_PER_TW];
   int context_task_counter;
 } partix_handle_t;
 
