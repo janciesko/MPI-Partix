@@ -74,7 +74,8 @@ void task_send(partix_task_args_t *args) {
                   comm, &request);
 
   assert(ret == 0);
-  ret = MPI_Wait(&request, MPI_STATUSES_IGNORE);
+  printf("req:%p\n", request);
+  ret = MPI_Wait(&request, MPI_STATUS_IGNORE);
   assert(ret == 0);
   partix_mutex_enter();
   reduction_var += task_args->some_data;
@@ -91,7 +92,7 @@ void task_recv(partix_task_args_t *args) {
   ret = MPI_Irecv(&tmp, 1, MPI_INT, task_args->target, 0,
                   comm, &request);
   assert(ret == 0);
-  ret = MPI_Wait(&request, MPI_STATUSES_IGNORE);
+  ret = MPI_Wait(&request, MPI_STATUS_IGNORE);
   assert(ret == 0);
   partix_mutex_enter();
   reduction_var += tmp;
