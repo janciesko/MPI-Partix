@@ -131,9 +131,9 @@ int main(int argc, char *argv[]) {
 #endif
   for (int i = 0; i < conf.num_tasks; ++i) {
     if(i%2)
-      partix_task(&task_send /*functor*/, &task_args /*capture by ref*/);
-    else
       partix_task(&task_recv /*functor*/, &task_args /*capture by ref*/);
+    else
+      partix_task(&task_send /*functor*/, &task_args /*capture by ref*/);   
   }
   partix_taskwait();
 
