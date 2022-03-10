@@ -82,6 +82,12 @@ thread_handle_t *register_task(size_t context) {
   it = context_map.find(context);
   if (it != context_map.end()) {
     partix_handle_t *context_handle = it->second;
+    if(context_handle->context_task_counter >= MAX_TASKS_PER_TW)
+    {
+      debug("Error: context_handle->context_task_counter > MAX_TASKS_PER_TW");
+      //TBD: return here an invalid threadHandle and stop generating tasks
+      exit(1);
+    }
     debug("register_task, it != context_map.end()");
     partix_mutex_exit(&context_mutex);
     return &context_handle
