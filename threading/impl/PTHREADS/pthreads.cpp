@@ -163,7 +163,7 @@ void partix_library_finalize(void) {
 void partix_thread_create(void (*f)(partix_task_args_t *), void *args,
                      pthread_t *handle) {
   debug("partix_thread_create");
-  int ret = pthread_create(handle, NULL, (void (*)(void *))f, args);
+  int ret = pthread_create(handle, NULL, (void *(*)(void *))f, args);
   SUCCEED(ret);
 }
 
