@@ -114,8 +114,8 @@ void partix_mutex_enter() {
 }
 
 void partix_mutex_exit() {
-  debug("partix_mutex_exit");
   int ret = qthread_unlock(&global_mutex);
+  debug("partix_mutex_exit");
   SUCCEED(ret);
 }
 
@@ -126,8 +126,8 @@ void partix_mutex_enter(partix_mutex_t *m) {
 }
 
 void partix_mutex_exit(partix_mutex_t *m) {
-  debug("partix_mutex_exit");
   int ret = qthread_unlock(m);
+  debug("partix_mutex_exit");
   SUCCEED(ret);
 }
 
@@ -146,7 +146,8 @@ int partix_executor_id(void) {
 
 void partix_library_init(void) {
   debug("partix_library_init");
-  qthread_initialize();
+  int ret = qthread_init(global_conf->num_threads);
+  SUCCEED(ret);
   partix_mutex_init(&global_mutex);
   partix_mutex_init(&context_mutex);
 }
