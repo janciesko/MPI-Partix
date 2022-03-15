@@ -34,7 +34,7 @@ void task(partix_task_args_t *args) {
   partix_mutex_enter();
   reduction_var += task_args->some_data;
   partix_mutex_exit();
-};
+}
 
 int main(int argc, char *argv[]) {
   partix_config_t conf;

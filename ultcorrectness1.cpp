@@ -49,7 +49,7 @@ void task_send(partix_task_args_t *args) {
 
   assert(ret == 0);
 
-  printf("ULTcorrectness1: Sending: %i in task %u, pthread %u to rank %i.\n",
+  printf("ULTcorrectness1: Sending: %i in task %u, pthread %lu to rank %i.\n",
          task_args->some_data, partix_executor_id(), pthread_self(),
          task_args->target);
 
@@ -57,7 +57,7 @@ void task_send(partix_task_args_t *args) {
 
 #if defined(DEBUG)
   // Additional output to see the resuming pthread
-  printf("ULTcorrectness1: Sending(B): %i in task %u, pthread %u to rank %i.\n",
+  printf("ULTcorrectness1: Sending(B): %i in task %u, pthread %lu to rank %i.\n",
          task_args->some_data, partix_executor_id(), pthread_self(),
          task_args->target);
 #endif
@@ -66,7 +66,7 @@ void task_send(partix_task_args_t *args) {
   partix_mutex_enter(&mutex);
   reduction_var += task_args->some_data;
   partix_mutex_exit(&mutex);
-};
+}
 
 void task_recv(partix_task_args_t *args) {
   int ret, tmp;
@@ -77,7 +77,7 @@ void task_recv(partix_task_args_t *args) {
   ret = MPI_Irecv(&tmp, 1, MPI_INT, task_args->target, 0, comm, &request);
   assert(ret == 0);
 
-  printf("ULTcorrectness1: Received: %i in task %u, pthread %u from rank %i.\n",
+  printf("ULTcorrectness1: Received: %i in task %u, pthread %lu from rank %i.\n",
          task_args->some_data, partix_executor_id(), pthread_self(),
          task_args->target);
 
@@ -86,7 +86,7 @@ void task_recv(partix_task_args_t *args) {
 #if defined(DEBUG)
   // Additional output to see the resuming pthread
   printf(
-      "ULTcorrectness1: Received(B): %i in task %u, pthread %u from rank %i.\n",
+      "ULTcorrectness1: Received(B): %i in task %u, pthread %lu from rank %i.\n",
       task_args->some_data, partix_executor_id(), pthread_self(),
       task_args->target);
 #endif
@@ -95,7 +95,7 @@ void task_recv(partix_task_args_t *args) {
   partix_mutex_enter(&mutex);
   reduction_var += tmp;
   partix_mutex_exit(&mutex);
-};
+}
 
 int main(int argc, char *argv[]) {
   partix_config_t conf;

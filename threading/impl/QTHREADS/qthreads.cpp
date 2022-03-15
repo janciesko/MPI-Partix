@@ -111,7 +111,7 @@ void partix_mutex_destroy(partix_mutex_t *m) {
 int partix_executor_id(void) {
   debug("partix_executor_id");
   return qthread_id();
-};
+}
 
 void partix_library_init(void) {
   debug("partix_library_init");

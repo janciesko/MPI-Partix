@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
   MPI_Count partitions = conf.num_partitions;
   MPI_Count partlength = conf.num_partlength;
 
-  double message[partitions * partlength];
+  double * message = new double[partitions * partlength];
   int source = 0, dest = 1, tag = 1, flag = 0;
   int myrank, i;
   int provided;
@@ -62,7 +62,9 @@ int main(int argc, char *argv[]) {
     }
     MPI_Request_free(&request);
   }
+
+  delete[] message;
   MPI_Finalize();
-  partix_library_finalize();
+  partix_library_finalize(); 
   return 0;
 }

@@ -53,12 +53,12 @@ void recv_task(partix_task_args_t *args) {
       flag2++;
     }
   }
-};
+}
 
 void send_task(partix_task_args_t *args) {
   send_task_args_t *task_args = (send_task_args_t *)args->user_task_args;
   MPI_Pready(task_args->partition_id, *task_args->request);
-};
+}
 
 int main(int argc, char *argv[]) {
   partix_config_t conf;
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
       MPI_Count recv_partlength =
           num_partlength / DEFAULT_SEND_RECV_PARTITION_RATIO;
 
-      double message[num_partitions * num_partlength];
+      double * message = new double[num_partitions * num_partlength];
 
       data_size = num_partitions * num_partlength * sizeof(DATA_TYPE);
 
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
         send_task_args_t *send_args = (send_task_args_t *)calloc(
             send_partitions, sizeof(send_task_args_t));
 
-        MPI_Psend_init(message, send_partitions, 1, send_xfer_type, dest, tag,
+        MPI_Psend_init(message, send_partitions, count, send_xfer_type, dest, tag,
                        MPI_COMM_WORLD, info, &request);
         MPI_Start(&request);
         double start_time = MPI_Wtime();
@@ -145,7 +145,7 @@ int main(int argc, char *argv[]) {
         recv_task_args_t *recv_args = (recv_task_args_t *)calloc(
             recv_partitions, sizeof(recv_task_args_t));
 
-        MPI_Precv_init(message, recv_partitions, 1, recv_xfer_type, source, tag,
+        MPI_Precv_init(message, recv_partitions, count, recv_xfer_type, source, tag,
                        MPI_COMM_WORLD, info, &request);
         MPI_Start(&request);
         double start_time = MPI_Wtime();
@@ -173,13 +173,14 @@ int main(int argc, char *argv[]) {
         MPI_Request_free(&request);
         free(recv_args);
       }
+      delete[] message;
     }
   }
 
   timer[0] /= iterations;
   timer[1] /= iterations;
   double recv_BW = data_size / timer[1];
-  printf("%d, %d, %d\n", timer[0] /*rank0*/, timer[1] /*rank1*/, recv_BW);
+  printf("%f, %f, %f\n", timer[0] /*rank0*/, timer[1] /*rank1*/, recv_BW);
 
   MPI_Finalize();
   partix_library_finalize();

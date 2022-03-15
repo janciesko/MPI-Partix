@@ -25,7 +25,7 @@ typedef struct {
 void task(partix_task_args_t *args) {
   task_args_t *task_args = (task_args_t *)args->user_task_args;
   MPI_Pready(task_args->partition_id, *task_args->request);
-};
+}
 
 int main(int argc, char *argv[]) {
   partix_config_t conf;
@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
   MPI_Count partitions = conf.num_partitions;
   MPI_Count partlength = conf.num_partlength;
 
-  double message[partitions * partlength];
+  double * message = new double[partitions * partlength];
 
   int count = 1, source = 0, dest = 1, tag = 1, flag = 0;
   int myrank;
@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
       (task_args_t *)calloc(conf.num_partitions, sizeof(task_args_t));
 
   if (myrank == 0) {
-    MPI_Psend_init(message, partitions, 1, xfer_type, dest, tag, MPI_COMM_WORLD,
+    MPI_Psend_init(message, partitions, count, xfer_type, dest, tag, MPI_COMM_WORLD,
                    info, &request);
     MPI_Start(&request);
 #if defined(OMP)
@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
     }
     MPI_Request_free(&request);
   } else if (myrank == 1) {
-    MPI_Precv_init(message, partitions, 1, xfer_type, source, tag,
+    MPI_Precv_init(message, partitions, count, xfer_type, source, tag,
                    MPI_COMM_WORLD, info, &request);
     MPI_Start(&request);
     while (!flag) {
@@ -89,6 +89,7 @@ int main(int argc, char *argv[]) {
   }
 
   free(args);
+  delete[] message;
   MPI_Finalize();
   partix_library_finalize();
   return 0;

@@ -46,12 +46,12 @@ void recv_task(partix_task_args_t *args) {
       flag2++;
     }
   }
-};
+}
 
 void send_task(partix_task_args_t *args) {
   send_task_args_t *task_args = (send_task_args_t *)args->user_task_args;
   MPI_Pready(task_args->partition_id, *task_args->request);
-};
+}
 
 int main(int argc, char *argv[]) {
   partix_config_t conf;
@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
   MPI_Count recv_partitions = send_partitions * 2;
   MPI_Count recv_partlength = send_partlength / 2;
 
-  double message[send_partitions * send_partlength];
+  double * message = new double[send_partitions * send_partlength];
 
   int count = 1, source = 0, dest = 1, tag = 1, flag = 0;
   int myrank;
@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
       (recv_task_args_t *)calloc(recv_partitions, sizeof(recv_task_args_t));
 
   if (myrank == 0) {
-    MPI_Psend_init(message, send_partitions, 1, send_xfer_type, dest, tag,
+    MPI_Psend_init(message, send_partitions, count, send_xfer_type, dest, tag,
                    MPI_COMM_WORLD, info, &request);
     MPI_Start(&request);
 #if defined(OMP)
@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
     }
     MPI_Request_free(&request);
   } else if (myrank == 1) {
-    MPI_Precv_init(message, recv_partitions, 1, recv_xfer_type, source, tag,
+    MPI_Precv_init(message, recv_partitions, count, recv_xfer_type, source, tag,
                    MPI_COMM_WORLD, info, &request);
     MPI_Start(&request);
 #if defined(OMP)
@@ -133,6 +133,7 @@ int main(int argc, char *argv[]) {
 
   free(send_args);
   free(recv_args);
+  delete[] message;
   MPI_Finalize();
   partix_library_finalize();
 

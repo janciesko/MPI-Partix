@@ -35,7 +35,7 @@ void task_inner(partix_task_args_t *args) {
   partix_mutex_enter();
   reduction_var += task_args->some_data;
   partix_mutex_exit();
-};
+}
 
 void task_outer(partix_task_args_t *args) {
   task_args_t *task_args = (task_args_t *)args->user_task_args;
@@ -43,7 +43,7 @@ void task_outer(partix_task_args_t *args) {
     partix_task(&task_inner /*functor*/, task_args /*capture by ref*/);
   }
   partix_taskwait();
-};
+}
 
 int main(int argc, char *argv[]) {
   partix_config_t conf;
