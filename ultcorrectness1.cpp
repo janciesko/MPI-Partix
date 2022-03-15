@@ -48,7 +48,9 @@
 #include <cstdlib>
 #include <unistd.h>
 
+#if defined(DEBUG)
 #include <pthread.h>
+#endif
 
 #include <partix.h>
 
