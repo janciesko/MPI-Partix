@@ -42,6 +42,7 @@ __attribute__((noinline)) size_t get_context() {
   const unsigned int level = 2;
   size_t addr =
       (size_t)__builtin_extract_return_addr(__builtin_frame_address(level));
+  //Replace by backtrace to make this generic
   return addr;
 }
 
