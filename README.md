@@ -1,5 +1,3 @@
-# MPI_PartComBENCH
+# MPI_Partix
 
-Application samples from the Open MPI spec. Uses generic tasking interface to abstract from several threading and user-level threading libraries.
-Useful to verify correctness of user-level theading support in MPI as well as support for partition communication.
-
+Application suite to test user-level threading (ULT) support in MPI implementations as well as their support for partitioned communication (PC) . A generic tasking interface abstracts from several threading and user-level threading libraries.
