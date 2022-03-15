@@ -69,7 +69,7 @@ typedef std::map<size_t, partix_handle_t *> partix_context_map_t;
 partix_context_map_t context_map;
 
 __attribute__((noinline)) size_t get_context() {
-  debug("get_context_outer");
+  debug("get_context");
   const unsigned int level = 2;
   size_t addr =
       (size_t)__builtin_extract_return_addr(__builtin_frame_address(level));

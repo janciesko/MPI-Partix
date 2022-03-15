@@ -100,6 +100,7 @@ int main(int argc, char *argv[]) {
   } while (time <= 200.0);
 
   printf("%f[ms] per task (%i tasks executed)\n", time / num_tasks, num_tasks);
+  /*Perceived BW*/
   assert(reduction_var == DEFAULT_VALUE * num_tasks);
   partix_library_finalize();
   return 0;
