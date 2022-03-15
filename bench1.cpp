@@ -13,6 +13,7 @@
 
 #include "mpi.h"
 #include <stdlib.h>
+#include <cstdio>
 
 #include <partix.h>
 
