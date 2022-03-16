@@ -49,17 +49,23 @@ void task_send(partix_task_args_t *args) {
 
   assert(ret == 0);
 
+#if defined(DEBUG)
   printf("ULTcorrectness1: Sending: %i in task %u, pthread %lu to rank %i.\n",
          task_args->some_data, partix_executor_id(), pthread_self(),
          task_args->target);
 
+#else
+  printf("ULTcorrectness1: Sending: %i in task %u to rank %i.\n",
+         task_args->some_data, partix_executor_id(), task_args->target);
+#endif
   ret = MPI_Wait(&request, MPI_STATUS_IGNORE);
 
 #if defined(DEBUG)
   // Additional output to see the resuming pthread
-  printf("ULTcorrectness1: Sending(B): %i in task %u, pthread %lu to rank %i.\n",
-         task_args->some_data, partix_executor_id(), pthread_self(),
-         task_args->target);
+  printf(
+      "ULTcorrectness1: Sending(B): %i in task %u, pthread %lu to rank %i.\n",
+      task_args->some_data, partix_executor_id(), pthread_self(),
+      task_args->target);
 #endif
 
   assert(ret == 0);
@@ -77,18 +83,24 @@ void task_recv(partix_task_args_t *args) {
   ret = MPI_Irecv(&tmp, 1, MPI_INT, task_args->target, 0, comm, &request);
   assert(ret == 0);
 
-  printf("ULTcorrectness1: Received: %i in task %u, pthread %lu from rank %i.\n",
-         task_args->some_data, partix_executor_id(), pthread_self(),
-         task_args->target);
+#if defined(DEBUG)
+  printf(
+      "ULTcorrectness1: Received: %i in task %u, pthread %lu from rank %i.\n",
+      task_args->some_data, partix_executor_id(), pthread_self(),
+      task_args->target);
+#else
+  printf("ULTcorrectness1: Received: %i in task %u from rank %i.\n",
+         task_args->some_data, partix_executor_id(), task_args->target);
+#endif
 
   ret = MPI_Wait(&request, MPI_STATUS_IGNORE);
 
 #if defined(DEBUG)
   // Additional output to see the resuming pthread
-  printf(
-      "ULTcorrectness1: Received(B): %i in task %u, pthread %lu from rank %i.\n",
-      task_args->some_data, partix_executor_id(), pthread_self(),
-      task_args->target);
+  printf("ULTcorrectness1: Received(B): %i in task %u, pthread %lu from rank "
+         "%i.\n",
+         task_args->some_data, partix_executor_id(), pthread_self(),
+         task_args->target);
 #endif
 
   assert(ret == 0);
@@ -137,7 +149,7 @@ int main(int argc, char *argv[]) {
   // This tests correct ULT functionality with ULT libs with
   // FIFO or LIFO schedulers
 
-  for (int i = 0; i < conf.num_tasks; i+=2) {
+  for (int i = 0; i < conf.num_tasks; i += 2) {
     if (i < 2) {
       partix_task(&task_recv /*functor*/, &task_args /*capture by ref*/);
       partix_task(&task_send /*functor*/, &task_args /*capture by ref*/);
@@ -148,7 +160,7 @@ int main(int argc, char *argv[]) {
   }
 
   partix_taskwait();
-  
+
   assert(reduction_var == DEFAULT_VALUE * conf.num_tasks);
   partix_mutex_destroy(&mutex);
   partix_library_finalize();
