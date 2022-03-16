@@ -17,7 +17,7 @@
 
 #include <partix.h>
 
-#define DEFAULT_ITERS 1
+#define DEFAULT_ITERS 10
 #define DEFAULT_SEND_RECV_PARTITION_RATIO 1
 #define DATA_TYPE MPI_DOUBLE
 
@@ -179,8 +179,20 @@ int main(int argc, char *argv[]) {
 
   timer[0] /= iterations;
   timer[1] /= iterations;
-  double recv_BW = data_size / timer[1];
-  printf("%f, %f, %f\n", timer[0] /*rank0*/, timer[1] /*rank1*/, recv_BW);
+  
+
+  if(myrank == 0)
+  {
+    double send_BW = data_size / timer[0] / 1024 / 1024;
+    #if false
+    printf("%f, %f, %f\n", timer[0] /*rank0*/, timer[1] /*rank1*/, send_BW);
+    #endif
+  }
+  else
+  {
+    double recv_BW = data_size / timer[1] / 1024 / 1024;
+    printf("%f, %f, %f\n", timer[0] /*rank0*/, timer[1] /*rank1*/, recv_BW);
+  }
 
   MPI_Finalize();
   partix_library_finalize();
