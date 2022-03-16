@@ -14,16 +14,25 @@
 #ifndef __PARTIX_H__
 #define __PARTIX_H__
 
+/* Number of workers in ULT libraries and OpenMP*/
 #define NUM_THREADS_DEFAULT 2
+
+/* Number of tasks in ULT libraries and OpenMP
+   Number of threads with Pthreads */
 #define NUM_TASKS_DEFAULT NUM_THREADS_DEFAULT * 8
+
+/* Per default, numer of partitions is the number of tasks*/
 #define PARTITIONS_DEFAULT NUM_TASKS_DEFAULT
+
+/* Num elements of MPI_TYPE
+   For MPI_DOUBLE, this creates a partition of 128 bytes */
 #define PARTLENGTH_DEFAULT 16
 
 #include <thread.h>
 
 #define DEFAULT_CONF_VAL 1
 
-extern partix_config_t * global_conf;
+extern partix_config_t *global_conf;
 
 void partix_init(int argc, char *argv[], partix_config_t *conf) {
   conf->num_tasks = argc > 1 ? atoi(argv[1]) : NUM_TASKS_DEFAULT;
@@ -36,7 +45,7 @@ void partix_init(int argc, char *argv[], partix_config_t *conf) {
   global_conf = conf;
 }
 
-void partix_finalize() {; /* Empty. */ }
+void partix_finalize() { ; /* Empty. */ }
 
 void partix_add_noise() {}
 
