@@ -17,7 +17,7 @@
 
 #include <partix.h>
 
-#define DEFAULT_ITERS 10
+#define DEFAULT_ITERS 4
 #define DEFAULT_SEND_RECV_PARTITION_RATIO 1
 #define DATA_TYPE MPI_DOUBLE
 
@@ -183,14 +183,14 @@ int main(int argc, char *argv[]) {
   if (myrank == 0) {
     double send_BW = total_size_bytes / timer[0] / 1024 / 1024;
 #if false
-    printf("%i, %i, %i, %i, %f, %f, %f\n", conf.num_tasks, conf.num_threads,
-        conf.num_partitions, patition_size_bytes, timer[0] /*rank0*/,
-        timer[1] /*rank1*/, send_BW);
+    printf("%i, %i, %i, %i, %i, %f, %f\n", conf.num_tasks, conf.num_threads,
+        conf.num_partitions, patition_size_bytes, total_size_bytes,
+        timer[0] /*rank0*/, send_BW);
 #endif
   } else {
     double recv_BW = total_size_bytes / timer[1] / 1024 / 1024;
-    printf("%i, %i, %i, %i, %f, %f, %f\n", conf.num_tasks, conf.num_threads,
-           conf.num_partitions, patition_size_bytes, timer[0] /*rank0*/,
+    printf("%i, %i, %i, %i, %i, %f, %f\n", conf.num_tasks, conf.num_threads,
+           conf.num_partitions, patition_size_bytes, total_size_bytes,
            timer[1] /*rank1*/, recv_BW);
   }
 
