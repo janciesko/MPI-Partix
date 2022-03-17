@@ -14,6 +14,8 @@
 #include <cassert>
 #include <map>
 #include <thread.h>
+#include <stdlib.h>
+
 #include <malloc.h>
 
 #define SUCCEED(val) assert(val == 0)
