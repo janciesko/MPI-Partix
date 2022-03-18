@@ -14,6 +14,8 @@
 #ifndef __PARTIX_H__
 #define __PARTIX_H__
 
+#include <stdlib.h>
+
 /* Number of workers in ULT libraries and OpenMP*/
 #define NUM_THREADS_DEFAULT 2
 
