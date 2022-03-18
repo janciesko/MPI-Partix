@@ -114,6 +114,9 @@ int main(int argc, char *argv[]) {
         MPI_Start(&request);
         double start_time = MPI_Wtime();
 
+        // set context
+        partix_context_t ctx;
+
 #if defined(OMP)
 #pragma omp parallel num_threads(conf.num_threads)
 #pragma omp single
@@ -121,9 +124,9 @@ int main(int argc, char *argv[]) {
         for (int j = 0; j < send_partitions; ++j) {
           send_args[j].request = &request;
           send_args[j].partition_id = j;
-          partix_task(&send_task /*functor*/, &send_args[j] /*capture*/);
+          partix_task(&send_task /*functor*/, &send_args[j] /*capture*/, &ctx);
         }
-        partix_taskwait();
+        partix_taskwait(&ctx);
         while (!flag) {
           /* Do useful work */
           MPI_Test(&request, &flag, MPI_STATUS_IGNORE);
@@ -147,6 +150,9 @@ int main(int argc, char *argv[]) {
         MPI_Start(&request);
         double start_time = MPI_Wtime();
 
+        // set context
+        partix_context_t ctx;
+
 #if defined(OMP)
 #pragma omp parallel num_threads(conf.num_threads)
 #pragma omp single
@@ -154,9 +160,9 @@ int main(int argc, char *argv[]) {
         for (int j = 0; j < recv_partitions; j += 2) {
           recv_args[j].request = &request;
           recv_args[j].partition_id = j;
-          partix_task(&recv_task /*functor*/, &recv_args[j] /*capture*/);
+          partix_task(&recv_task /*functor*/, &recv_args[j] /*capture*/, &ctx);
         }
-        partix_taskwait();
+        partix_taskwait(&ctx);
 
         while (!flag) {
           /* Do useful work */

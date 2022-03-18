@@ -24,23 +24,26 @@
 #endif
 
 __attribute__((noinline)) void partix_task(void (*)(partix_task_args_t *),
-                                           void *);
-__attribute__((noinline)) void partix_task(void (*)(partix_task_args_t *),
                                            void *, partix_context_t *);
-
-void partix_mutex_enter(void);
-void partix_mutex_exit(void);
-void partix_mutex_enter(partix_mutex_t *);
-void partix_mutex_exit(partix_mutex_t *);
-void partix_mutex_init(partix_mutex_t *);
-void partix_mutex_destroy(partix_mutex_t *);
-
-__attribute__((noinline)) void partix_taskwait(void);
 __attribute__((noinline)) void partix_taskwait(partix_context_t *);
-
-int partix_executor_id(void);
 
 void partix_library_init(void);
 void partix_library_finalize(void);
+
+void partix_mutex_enter(void);
+void partix_mutex_exit(void);
+
+void partix_mutex_enter(partix_mutex_t *);
+void partix_mutex_exit(partix_mutex_t *);
+
+void partix_mutex_init(partix_mutex_t *);
+void partix_mutex_destroy(partix_mutex_t *);
+
+int partix_executor_id(void);
+
+/*Non-conexted functions are deprecated*/
+__attribute__((noinline)) void partix_task(void (*)(partix_task_args_t *),
+                                           void *);
+__attribute__((noinline)) void partix_taskwait(void);
 
 #endif /* __PARTIX_THREAD_H__ */

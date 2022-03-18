@@ -47,6 +47,8 @@ int main(int argc, char *argv[]) {
   int next_num_tasks = num_tasks;
 
   double time;
+  // set context
+  partix_context_t ctx;
 
 #if defined(OMP)
 #pragma omp parallel num_threads(conf.num_threads)
@@ -57,9 +59,9 @@ int main(int argc, char *argv[]) {
     num_tasks = next_num_tasks;
     double start_time = MPI_Wtime();
     for (int i = 0; i < num_tasks; ++i) {
-      partix_task(&task /*functor*/, &task_args /*capture by ref*/);
+      partix_task(&task /*functor*/, &task_args /*capture by ref*/, &ctx);
     }
-    partix_taskwait();
+    partix_taskwait(&ctx);
     double end_time = MPI_Wtime();
 
     if (next_num_tasks * 2 > std::numeric_limits<int>::max() / 4)

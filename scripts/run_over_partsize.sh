@@ -15,15 +15,15 @@ num_tasks=1
 num_threads=$num_tasks
 num_part=$num_tasks
 
-export QTHREAD_STACK_SIZE=16384
-export OMPI_MCA_pml=ob1
+export QTHREAD_STACK_SIZE=8192
+#export OMPI_MCA_pml=ob1
 
 for t in {1..10..1}; do 
   total_partlen_elems=$total_partlen_elems_start
   for size in {1..16..1}; do 
     let num_partlen=$total_partlen_elems/$num_tasks
     #echo "mpirun --map-by ppr:2:node --host  $hosts ./bench1 $num_tasks $num_threads $num_part $num_partlen"
-    mpirun --map-by ppr:1:node --host  $hosts ./bench1 $num_tasks $num_threads $num_part $num_partlen
+    mpirun --map-by ppr:2:node --host  $hosts ./bench1 $num_tasks $num_threads $num_part $num_partlen
     let total_partlen_elems=$total_partlen_elems*2
   done
   let num_tasks=$num_tasks*2

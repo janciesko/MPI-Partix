@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
   MPI_Count partitions = conf.num_partitions;
   MPI_Count partlength = conf.num_partlength;
 
-  double * message = new double[partitions * partlength];
+  double *message = new double[partitions * partlength];
 
   int count = 1, source = 0, dest = 1, tag = 1, flag = 0;
   int myrank;
@@ -57,9 +57,13 @@ int main(int argc, char *argv[]) {
       (task_args_t *)calloc(conf.num_partitions, sizeof(task_args_t));
 
   if (myrank == 0) {
-    MPI_Psend_init(message, partitions, count, xfer_type, dest, tag, MPI_COMM_WORLD,
-                   info, &request);
+    MPI_Psend_init(message, partitions, count, xfer_type, dest, tag,
+                   MPI_COMM_WORLD, info, &request);
     MPI_Start(&request);
+
+    // set context
+    partix_context_t ctx;
+
 #if defined(OMP)
 #pragma omp parallel num_threads(conf.num_threads)
 #pragma omp single
@@ -67,9 +71,9 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < partitions; ++i) {
       args[i].request = &request;
       args[i].partition_id = i;
-      partix_task(&task /*functor*/, &args[i] /*capture*/);
+      partix_task(&task /*functor*/, &args[i] /*capture*/, &ctx);
     }
-    partix_taskwait();
+    partix_taskwait(&ctx);
     while (!flag) {
       /* Do useful work */
       MPI_Test(&request, &flag, MPI_STATUS_IGNORE);

@@ -43,14 +43,17 @@ int main(int argc, char *argv[]) {
   task_args_t task_args;
   task_args.some_data = DEFAULT_VALUE;
 
+  // set context
+  partix_context_t ctx;
+
 #if defined(OMP)
 #pragma omp parallel num_threads(conf.num_threads)
 #pragma omp single
 #endif
   for (int i = 0; i < conf.num_tasks; ++i) {
-    partix_task(&task /*functor*/, &task_args /*capture by ref*/);
+    partix_task(&task /*functor*/, &task_args /*capture by ref*/, &ctx);
   }
-  partix_taskwait();
+  partix_taskwait(&ctx);
 
   assert(reduction_var == DEFAULT_VALUE * conf.num_tasks);
 

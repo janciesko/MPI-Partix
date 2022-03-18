@@ -38,6 +38,8 @@ typedef struct {
   int target;
 } task_args_t;
 
+
+__attribute__((noinline)) 
 void task_send(partix_task_args_t *args) {
   int ret;
   MPI_Request request;
@@ -74,6 +76,7 @@ void task_send(partix_task_args_t *args) {
   partix_mutex_exit(&mutex);
 }
 
+__attribute__((noinline)) 
 void task_recv(partix_task_args_t *args) {
   int ret, tmp;
   MPI_Request request;
@@ -140,6 +143,9 @@ int main(int argc, char *argv[]) {
 
   partix_mutex_init(&mutex);
 
+  //set context
+  partix_context_t ctx;
+
 #if defined(OMP)
 #pragma omp parallel num_threads(conf.num_threads)
 #pragma omp single
@@ -151,15 +157,15 @@ int main(int argc, char *argv[]) {
 
   for (int i = 0; i < conf.num_tasks; i += 2) {
     if (i < 2) {
-      partix_task(&task_recv /*functor*/, &task_args /*capture by ref*/);
-      partix_task(&task_send /*functor*/, &task_args /*capture by ref*/);
+      partix_task(&task_recv /*functor*/, &task_args /*capture by ref*/, &ctx);
+      partix_task(&task_send /*functor*/, &task_args /*capture by ref*/, &ctx);
     } else {
-      partix_task(&task_send /*functor*/, &task_args /*capture by ref*/);
-      partix_task(&task_recv /*functor*/, &task_args /*capture by ref*/);
+      partix_task(&task_send /*functor*/, &task_args /*capture by ref*/, &ctx);
+      partix_task(&task_recv /*functor*/, &task_args /*capture by ref*/, &ctx);
     }
   }
 
-  partix_taskwait();
+  partix_taskwait(&ctx);
 
   assert(reduction_var == DEFAULT_VALUE * conf.num_tasks);
   partix_mutex_destroy(&mutex);

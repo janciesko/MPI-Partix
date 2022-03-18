@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
   MPI_Count recv_partitions = send_partitions * 2;
   MPI_Count recv_partlength = send_partlength / 2;
 
-  double * message = new double[send_partitions * send_partlength];
+  double *message = new double[send_partitions * send_partlength];
 
   int count = 1, source = 0, dest = 1, tag = 1, flag = 0;
   int myrank;
@@ -92,6 +92,10 @@ int main(int argc, char *argv[]) {
     MPI_Psend_init(message, send_partitions, count, send_xfer_type, dest, tag,
                    MPI_COMM_WORLD, info, &request);
     MPI_Start(&request);
+
+    // set context
+    partix_context_t ctx;
+
 #if defined(OMP)
 #pragma omp parallel num_threads(conf.num_threads)
 #pragma omp single
@@ -99,9 +103,9 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < send_partitions; ++i) {
       send_args[i].request = &request;
       send_args[i].partition_id = i;
-      partix_task(&send_task /*functor*/, &send_args[i] /*capture*/);
+      partix_task(&send_task /*functor*/, &send_args[i] /*capture*/, &ctx);
     }
-    partix_taskwait();
+    partix_taskwait(&ctx);
     while (!flag) {
       /* Do useful work */
       MPI_Test(&request, &flag, MPI_STATUS_IGNORE);
@@ -112,6 +116,10 @@ int main(int argc, char *argv[]) {
     MPI_Precv_init(message, recv_partitions, count, recv_xfer_type, source, tag,
                    MPI_COMM_WORLD, info, &request);
     MPI_Start(&request);
+
+    // set context
+    partix_context_t ctx;
+
 #if defined(OMP)
 #pragma omp parallel num_threads(conf.num_threads)
 #pragma omp single
@@ -119,9 +127,9 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < recv_partitions; i += 2) {
       recv_args[i].request = &request;
       recv_args[i].partition_id = i;
-      partix_task(&recv_task /*functor*/, &recv_args[i] /*capture*/);
+      partix_task(&recv_task /*functor*/, &recv_args[i] /*capture*/, &ctx);
     }
-    partix_taskwait();
+    partix_taskwait(&ctx);
 
     while (!flag) {
       /* Do useful work */
