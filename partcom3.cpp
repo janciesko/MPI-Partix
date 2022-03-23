@@ -13,6 +13,7 @@
 
 #include "mpi.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 #include <partix.h>
 
@@ -31,20 +32,11 @@ typedef struct {
 
 void recv_task(partix_task_args_t *args) {
   recv_task_args_t *task_args = (recv_task_args_t *)args->user_task_args;
-
-  int flag1 = 0;
-  int flag2 = 0;
-
+  int cond = 0;
   int partition_id = task_args->partition_id;
 
-  while (flag1 == 0 || flag2 == 0) {
-    /* test partition_id #partition_id and #partition_id+1 */
-    MPI_Parrived(*task_args->request, partition_id, &flag1);
-    if (partition_id + 1 < task_args->recv_partitions) {
-      MPI_Parrived(*task_args->request, partition_id + 1, &flag2);
-    } else {
-      flag2++;
-    }
+  while (cond == 0) {
+    MPI_Parrived(*task_args->request, partition_id, &cond);  
   }
 }
 
@@ -60,8 +52,8 @@ int main(int argc, char *argv[]) {
 
   MPI_Count send_partitions = conf.num_partitions;
   MPI_Count send_partlength = conf.num_partlength;
-  MPI_Count recv_partitions = send_partitions * 2;
-  MPI_Count recv_partlength = send_partlength / 2;
+  MPI_Count recv_partitions = send_partitions;
+  MPI_Count recv_partlength = send_partlength;
 
   double *message = new double[send_partitions * send_partlength];
 
@@ -124,7 +116,8 @@ int main(int argc, char *argv[]) {
 #pragma omp parallel num_threads(conf.num_threads)
 #pragma omp single
 #endif
-    for (int i = 0; i < recv_partitions; i += 2) {
+    for (int i = 0; i < recv_partitions; ++i) {
+      recv_args[i].recv_partitions = recv_partitions;
       recv_args[i].request = &request;
       recv_args[i].partition_id = i;
       partix_task(&recv_task /*functor*/, &recv_args[i] /*capture*/, &ctx);

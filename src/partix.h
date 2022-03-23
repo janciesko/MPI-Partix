@@ -16,19 +16,22 @@
 
 #include <stdlib.h>
 
-/* Number of workers in ULT libraries and OpenMP*/
+/* Number of workers in ULT libraries and OpenMP */
 #define NUM_THREADS_DEFAULT 2
 
 /* Number of tasks in ULT libraries and OpenMP
    Number of threads with Pthreads */
 #define NUM_TASKS_DEFAULT NUM_THREADS_DEFAULT * 8
 
-/* Per default, numer of partitions is the number of tasks*/
+/* Per default, numer of partitions is the number of tasks */
 #define PARTITIONS_DEFAULT NUM_TASKS_DEFAULT
 
 /* Num elements of MPI_TYPE
    For MPI_DOUBLE, this creates a partition of 128 bytes */
 #define PARTLENGTH_DEFAULT 16
+
+/* Used to simulate computation and communication overlap */
+#define OVERLAP_IN_MSEC_DEFAULT 0
 
 #include <thread.h>
 
@@ -41,6 +44,7 @@ void partix_init(int argc, char *argv[], partix_config_t *conf) {
   conf->num_threads = argc > 2 ? atoi(argv[2]) : NUM_THREADS_DEFAULT;
   conf->num_partitions = argc > 3 ? atoi(argv[3]) : PARTITIONS_DEFAULT;
   conf->num_partlength = argc > 4 ? atoi(argv[4]) : PARTLENGTH_DEFAULT;
+  conf->overlap = argc > 5 ? atoi(argv[5]) : OVERLAP_IN_MSEC_DEFAULT;
   conf->add_noise = partix_noise_off;
 
   /* conf object duration should be valid until partix_finalize() */

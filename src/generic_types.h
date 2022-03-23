@@ -21,6 +21,7 @@ typedef struct {
   int num_threads;
   int num_partitions;
   int num_partlength;
+  int overlap;
   bool add_noise;
 } partix_config_t;
 

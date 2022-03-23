@@ -15,7 +15,7 @@ sbrn.set_style("ticks", {"xtick.major.size": 12, "ytick.major.size": 12})
 
 dataSet = pd.read_table(sys.argv[1], skiprows = 0, header=0, delimiter=",")
 print(dataSet.head())
-ax = sbrn.lineplot(x="partsize", y="bw",  hue="partitions",  data=dataSet)
+ax = sbrn.lineplot(x="partsize", y="bw(MB)",  hue="partitions",  data=dataSet)
 
 #ax.set_xscale("log")
 #ax.set_yscale("log")

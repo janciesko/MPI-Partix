@@ -14,12 +14,14 @@
 #include "mpi.h"
 #include <cstdio>
 #include <stdlib.h>
-
 #include <partix.h>
 
-#define DEFAULT_ITERS 4
-#define DEFAULT_SEND_RECV_PARTITION_RATIO 1
+#define DEFAULT_ITERS 5
 #define DATA_TYPE MPI_DOUBLE
+#define USE_PARRIVED
+
+/*Currenly we support only ratios of 2*/
+#define DEFAULT_RECV_SEND_PARTITION_RATIO 2
 
 double timer[3] = {0.0, 0.0, 0.0};
 
@@ -38,19 +40,18 @@ typedef struct {
 
 void recv_task(partix_task_args_t *args) {
   recv_task_args_t *task_args = (recv_task_args_t *)args->user_task_args;
-
-  int flag1 = 0;
-  int flag2 = 0;
-
+  int cond1 = 0, cond2 = 0;
   int partition_id = task_args->partition_id;
 
-  while (flag1 == 0 || flag2 == 0) {
+  while (cond1 == 0 || cond2 == 0) {
     /* test partition_id #partition_id and #partition_id+1 */
-    MPI_Parrived(*task_args->request, partition_id, &flag1);
+    if(!cond1)
+      MPI_Parrived(*task_args->request, partition_id, &cond1);
     if (partition_id + 1 < task_args->recv_partitions) {
-      MPI_Parrived(*task_args->request, partition_id + 1, &flag2);
+      if(!cond2)
+        MPI_Parrived(*task_args->request, partition_id + 1, &cond2);  
     } else {
-      flag2++;
+      cond2++;
     }
   }
 }
@@ -73,9 +74,9 @@ int main(int argc, char *argv[]) {
   int myrank;
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
-  int iterations = DEFAULT_ITERS;
-  int num_partitions = conf.num_partitions;
-  int num_partlength = conf.num_partlength;
+  size_t iterations = DEFAULT_ITERS;
+  size_t num_partitions = conf.num_partitions;
+  size_t num_partlength = conf.num_partlength;
 
   for (int i = 0; i < iterations; ++i) {
     // Benchmark iteration
@@ -89,9 +90,9 @@ int main(int argc, char *argv[]) {
       MPI_Count send_partlength = num_partlength;
 
       MPI_Count recv_partitions =
-          num_partitions * DEFAULT_SEND_RECV_PARTITION_RATIO;
+          num_partitions * DEFAULT_RECV_SEND_PARTITION_RATIO;
       MPI_Count recv_partlength =
-          num_partlength / DEFAULT_SEND_RECV_PARTITION_RATIO;
+          num_partlength / DEFAULT_RECV_SEND_PARTITION_RATIO;
 
       double *message = new double[num_partitions * num_partlength];
 
@@ -111,9 +112,10 @@ int main(int argc, char *argv[]) {
 
         MPI_Psend_init(message, send_partitions, count, send_xfer_type, dest,
                        tag, MPI_COMM_WORLD, info, &request);
-        MPI_Start(&request);
-        double start_time = MPI_Wtime();
 
+        double start_time = MPI_Wtime();
+        MPI_Start(&request);
+        
         // set context
         partix_context_t ctx;
 
@@ -147,23 +149,24 @@ int main(int argc, char *argv[]) {
 
         MPI_Precv_init(message, recv_partitions, count, recv_xfer_type, source,
                        tag, MPI_COMM_WORLD, info, &request);
-        MPI_Start(&request);
         double start_time = MPI_Wtime();
+        MPI_Start(&request);
 
+#if defined (USE_PARRIVED)
         // set context
         partix_context_t ctx;
-
 #if defined(OMP)
 #pragma omp parallel num_threads(conf.num_threads)
 #pragma omp single
 #endif
         for (int j = 0; j < recv_partitions; j += 2) {
+          recv_args[j].recv_partitions = recv_partitions;
           recv_args[j].request = &request;
           recv_args[j].partition_id = j;
           partix_task(&recv_task /*functor*/, &recv_args[j] /*capture*/, &ctx);
         }
         partix_taskwait(&ctx);
-
+#endif
         while (!flag) {
           /* Do useful work */
           MPI_Test(&request, &flag, MPI_STATUS_IGNORE);
@@ -177,26 +180,27 @@ int main(int argc, char *argv[]) {
         free(recv_args);
       }
       delete[] message;
+      MPI_Barrier(MPI_COMM_WORLD);
     }
-    MPI_Barrier(MPI_COMM_WORLD);
   }
 
   timer[0] /= iterations;
   timer[1] /= iterations;
-  int patition_size_bytes = num_partlength * sizeof(DATA_TYPE);
-  int total_size_bytes = num_partitions * patition_size_bytes;
+
+  size_t patition_size_bytes = num_partlength * sizeof(DATA_TYPE);
+  size_t total_size_bytes = num_partitions * patition_size_bytes;
 
   if (myrank == 0) {
     double send_BW = total_size_bytes / timer[0] / 1024 / 1024;
 #if false
-    printf("%i, %i, %i, %i, %i, %f, %f\n", conf.num_tasks, conf.num_threads,
-        conf.num_partitions, patition_size_bytes, total_size_bytes,
+    printf("%i, %i, %i, %.2f, %.2f, %.2f, %.2f\n", conf.num_tasks, conf.num_threads,
+        conf.num_partitions, ((double)patition_size_bytes)/1024, ((double)total_size_bytes)/1024,
         timer[0] /*rank0*/, send_BW);
 #endif
   } else {
     double recv_BW = total_size_bytes / timer[1] / 1024 / 1024;
-    printf("%i, %i, %i, %i, %i, %f, %f\n", conf.num_tasks, conf.num_threads,
-           conf.num_partitions, patition_size_bytes, total_size_bytes,
+    printf("%i, %i, %i, %.2f, %.2f, %.2f, %.2f\n", conf.num_tasks, conf.num_threads,
+           conf.num_partitions, ((double)patition_size_bytes)/1024, ((double)total_size_bytes)/1024,
            timer[1] /*rank1*/, recv_BW);
   }
 

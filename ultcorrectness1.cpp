@@ -38,7 +38,6 @@ typedef struct {
   int target;
 } task_args_t;
 
-
 __attribute__((noinline)) 
 void task_send(partix_task_args_t *args) {
   int ret;
