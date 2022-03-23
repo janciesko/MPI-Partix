@@ -13,8 +13,8 @@
 
 #include "mpi.h"
 #include <cstdio>
-#include <stdlib.h>
 #include <partix.h>
+#include <stdlib.h>
 
 #define DEFAULT_ITERS 5
 #define DATA_TYPE MPI_DOUBLE
@@ -45,11 +45,11 @@ void recv_task(partix_task_args_t *args) {
 
   while (cond1 == 0 || cond2 == 0) {
     /* test partition_id #partition_id and #partition_id+1 */
-    if(!cond1)
+    if (!cond1)
       MPI_Parrived(*task_args->request, partition_id, &cond1);
     if (partition_id + 1 < task_args->recv_partitions) {
-      if(!cond2)
-        MPI_Parrived(*task_args->request, partition_id + 1, &cond2);  
+      if (!cond2)
+        MPI_Parrived(*task_args->request, partition_id + 1, &cond2);
     } else {
       cond2++;
     }
@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
 
         double start_time = MPI_Wtime();
         MPI_Start(&request);
-        
+
         // set context
         partix_context_t ctx;
 
@@ -152,7 +152,7 @@ int main(int argc, char *argv[]) {
         double start_time = MPI_Wtime();
         MPI_Start(&request);
 
-#if defined (USE_PARRIVED)
+#if defined(USE_PARRIVED)
         // set context
         partix_context_t ctx;
 #if defined(OMP)
@@ -199,9 +199,10 @@ int main(int argc, char *argv[]) {
 #endif
   } else {
     double recv_BW = total_size_bytes / timer[1] / 1024 / 1024;
-    printf("%i, %i, %i, %.2f, %.2f, %.2f, %.2f\n", conf.num_tasks, conf.num_threads,
-           conf.num_partitions, ((double)patition_size_bytes)/1024, ((double)total_size_bytes)/1024,
-           timer[1] /*rank1*/, recv_BW);
+    printf("%i, %i, %i, %.2f, %.2f, %.2f, %.2f\n", conf.num_tasks,
+           conf.num_threads, conf.num_partitions,
+           ((double)patition_size_bytes) / 1024,
+           ((double)total_size_bytes) / 1024, timer[1] /*rank1*/, recv_BW);
   }
 
   MPI_Finalize();

@@ -12,8 +12,8 @@
 */
 
 #include "mpi.h"
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <partix.h>
 
@@ -37,11 +37,11 @@ void recv_task(partix_task_args_t *args) {
 
   while (cond1 == 0 || cond2 == 0) {
     /* test partition_id #partition_id and #partition_id+1 */
-    if(!cond1)
+    if (!cond1)
       MPI_Parrived(*task_args->request, partition_id, &cond1);
     if (partition_id + 1 < task_args->recv_partitions) {
-      if(!cond2)
-        MPI_Parrived(*task_args->request, partition_id + 1, &cond2);  
+      if (!cond2)
+        MPI_Parrived(*task_args->request, partition_id + 1, &cond2);
     } else {
       cond2++;
     }
