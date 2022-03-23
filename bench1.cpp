@@ -21,7 +21,7 @@
 #define USE_PARRIVED
 
 /*Currenly we support only ratios of 2*/
-#define DEFAULT_RECV_SEND_PARTITION_RATIO 2
+#define DEFAULT_RECV_SEND_PARTITION_RATIO 1
 
 double timer[3] = {0.0, 0.0, 0.0};
 

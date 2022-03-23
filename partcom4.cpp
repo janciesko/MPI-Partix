@@ -17,6 +17,10 @@
 
 #include <partix.h>
 
+/*Currenly we support only ratios of 2*/
+/*Currently fails with 2. Possibly a bug in ompi*/
+#define DEFAULT_RECV_SEND_PARTITION_RATIO 1
+
 /* My task args */
 typedef struct {
   MPI_Request *request;
@@ -60,8 +64,10 @@ int main(int argc, char *argv[]) {
 
   MPI_Count send_partitions = conf.num_partitions;
   MPI_Count send_partlength = conf.num_partlength;
-  MPI_Count recv_partitions = send_partitions * 2;
-  MPI_Count recv_partlength = send_partlength / 2;
+  MPI_Count recv_partitions =
+      send_partitions * DEFAULT_RECV_SEND_PARTITION_RATIO;
+  MPI_Count recv_partlength =
+      send_partlength / DEFAULT_RECV_SEND_PARTITION_RATIO;
 
   double *message = new double[send_partitions * send_partlength];
 
