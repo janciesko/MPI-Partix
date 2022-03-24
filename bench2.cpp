@@ -54,6 +54,9 @@ void recv_task(partix_task_args_t *args) {
     } else {
       cond2++;
     }
+#if defined(OMP)
+#pragma omp taskyield
+#endif
   }
 }
 
@@ -78,6 +81,8 @@ int main(int argc, char *argv[]) {
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
   if (provided < MPI_THREAD_MULTIPLE)
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
+  MPI_Barrier(MPI_COMM_WORLD);
 
   int myrank;
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);

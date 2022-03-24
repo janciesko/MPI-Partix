@@ -53,6 +53,9 @@ void recv_task(partix_task_args_t *args) {
     } else {
       cond2++;
     }
+#if defined(OMP)
+#pragma omp taskyield
+#endif
   }
 }
 
@@ -70,6 +73,8 @@ int main(int argc, char *argv[]) {
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
   if (provided < MPI_THREAD_MULTIPLE)
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
+  MPI_Barrier(MPI_COMM_WORLD);
 
   int myrank;
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
@@ -166,6 +171,7 @@ int main(int argc, char *argv[]) {
           partix_task(&recv_task /*functor*/, &recv_args[j] /*capture*/, &ctx);
         }
         partix_taskwait(&ctx);
+
 #endif
         while (!flag) {
           /* Do useful work */
@@ -205,6 +211,7 @@ int main(int argc, char *argv[]) {
            ((double)total_size_bytes) / 1024, timer[1] /*rank1*/, recv_BW);
   }
 
+  MPI_Barrier(MPI_COMM_WORLD);
   MPI_Finalize();
   partix_library_finalize();
   return 0;
