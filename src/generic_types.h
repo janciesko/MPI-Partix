@@ -23,6 +23,8 @@ typedef struct {
   int num_partlength;
   int overlap;
   bool add_noise;
+  int argc;
+  char ** argv;
 } partix_config_t;
 
 typedef std::size_t partix_context_t;
