@@ -15,6 +15,7 @@
 #include <map>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include <thread.h>
 
@@ -24,6 +25,14 @@
 partix_mutex_t global_mutex;
 partix_mutex_t context_mutex;
 partix_config_t *global_conf;
+
+// Global vars
+void create_scheds(int num, ABT_pool *pools, ABT_sched *scheds);
+void create_threads(void *arg);
+
+typedef struct {
+  uint32_t event_freq;
+} sched_data_t;
 
 typedef struct {
   ABT_thread thread;
@@ -39,13 +48,12 @@ typedef struct {
 typedef struct abt_global_t {
   int num_xstreams;
   ABT_xstream *xstreams;
-  ABT_pool *shared_pools;
-  ABT_pool *private_pools;
-  ABT_sched *schedulers;
-  ABT_xstream_barrier xstream_barrier;
-  int first_init;
+  ABT_sched *scheds;
+  ABT_pool *pools;
+  ABT_thread *threads;
+  /* ABT_xstream_barrier xstream_barrier;*/
 } abt_global_t;
-abt_global_t g_abt_global;
+abt_global_t abt_global;
 
 struct barrier_handle_t {
   ABT_barrier barrier;
@@ -84,97 +92,100 @@ thread_handle_t *register_task(size_t context) {
   assert(false); // DO NOT REACH HERE
 }
 
-inline uint32_t xorshift_rand32(uint32_t *p_seed) {
-  /* George Marsaglia, "Xorshift RNGs", Journal of Statistical Software,
-   * Articles, 2003 */
-  uint32_t seed = *p_seed;
-  seed ^= seed << 13;
-  seed ^= seed >> 17;
-  seed ^= seed << 5;
-  *p_seed = seed;
-  return seed;
+void partix_sched_run(ABT_sched sched) {
+  uint32_t work_count = 0;
+  sched_data_t *p_data;
+  int num_pools;
+  ABT_pool *pools;
+  int target;
+  ABT_bool stop;
+  unsigned seed = time(NULL);
+
+  ABT_sched_get_data(sched, (void **)&p_data);
+  ABT_sched_get_num_pools(sched, &num_pools);
+  pools = (ABT_pool *)malloc(num_pools * sizeof(ABT_pool));
+  ABT_sched_get_pools(sched, num_pools, 0, pools);
+
+  debug("partix_sched_run while(1)");
+  while (1) {
+    /* Execute one work unit from the scheduler's pool */
+    ABT_thread thread;
+    ABT_pool_pop_thread(pools[0], &thread);
+    if (thread != ABT_THREAD_NULL) {
+      /* "thread" is associated with its original pool (pools[0]). */
+      ABT_self_schedule(thread, ABT_POOL_NULL);
+    } else if (num_pools > 1) {
+      /* Steal a work unit from other pools */
+      target = (num_pools == 2) ? 1 : (rand_r(&seed) % (num_pools - 1) + 1);
+      ABT_pool_pop_thread(pools[target], &thread);
+      if (thread != ABT_THREAD_NULL) {
+        /* "thread" is associated with its original pool
+         * (pools[target]). */
+        ABT_self_schedule(thread, pools[target]);
+      }
+    }
+
+    if (++work_count >= p_data->event_freq) {
+      work_count = 0;
+      ABT_sched_has_to_stop(sched, &stop);
+      if (stop == ABT_TRUE)
+        break;
+      ABT_xstream_check_events(sched);
+    }
+  }
+
+  debug("free pools");
+  free(pools);
 }
 
-int partix_sched_init(ABT_sched sched, ABT_sched_config config) {
+int partix_sched_free(ABT_sched sched) {
+  sched_data_t *p_data;
+
+  debug("ABT_sched_get_data");
+  ABT_sched_get_data(sched, (void **)&p_data);
+  free(p_data);
+
   return ABT_SUCCESS;
 }
 
-void partix_sched_run(ABT_sched sched) {
-  const int work_count_mask_local = 16 - 1;
-  const int work_count_mask_remote = 256 - 1;
-  const int work_count_mask_event = 8192 - 1;
-  int rank;
+int partix_sched_init(ABT_sched sched, ABT_sched_config config) {
 
-  debug("partix_sched_run");
-  ABT_self_get_xstream_rank(&rank);
+  sched_data_t *p_data = (sched_data_t *)calloc(1, sizeof(sched_data_t));
 
-  uint64_t my_vcimask = 0;
-  if (g_abt_global.first_init == 0) {
-    for (int i = rank; i < 64; i += g_abt_global.num_xstreams) {
-      my_vcimask += ((uint64_t)1) << ((uint64_t)i);
-    }
-    ABT_xstream_barrier_wait(g_abt_global.xstream_barrier);
-    g_abt_global.first_init = 1;
-  }
-  int num_pools;
-  ABT_sched_get_num_pools(sched, &num_pools);
-  ABT_pool *all_pools = (ABT_pool *)malloc(num_pools * sizeof(ABT_pool));
-  ABT_sched_get_pools(sched, num_pools, 0, all_pools);
-  ABT_pool my_shared_pool = all_pools[0];
-  ABT_pool my_priv_pool = all_pools[1];
-  int num_shared_pools = num_pools - 2;
-  ABT_pool *shared_pools = all_pools + 2;
+  ABT_sched_config_read(config, 1, &p_data->event_freq);
+  ABT_sched_set_data(sched, (void *)p_data);
 
-  uint32_t seed = (uint32_t)((intptr_t)all_pools);
-
-  int work_count = 0;
-  while (1) {
-    int local_work_count = 0;
-    ABT_unit unit;
-    /* Try to pop a ULT from a local pool */
-    ABT_pool_pop(my_priv_pool, &unit);
-    if (unit != ABT_UNIT_NULL) {
-      /* Move this unit to my_shared_pool. */
-      ABT_xstream_run_unit(unit, my_priv_pool);
-      local_work_count++;
-      work_count++;
-    }
-    if (local_work_count == 0 || ((work_count & work_count_mask_local) == 0)) {
-      ABT_pool_pop(my_shared_pool, &unit);
-      if (unit != ABT_UNIT_NULL) {
-        ABT_xstream_run_unit(unit, my_shared_pool);
-        local_work_count++;
-        work_count++;
-      }
-    }
-    if (local_work_count == 0 || ((work_count & work_count_mask_remote) == 0)) {
-      /* RWS */
-      if (num_shared_pools > 0) {
-        uint32_t rand_num = xorshift_rand32(&seed);
-        ABT_pool victim_pool = shared_pools[rand_num % num_shared_pools];
-        ABT_pool_pop(victim_pool, &unit);
-        if (unit != ABT_UNIT_NULL) {
-          ABT_unit_set_associated_pool(unit, my_shared_pool);
-          ABT_xstream_run_unit(unit, my_shared_pool);
-          local_work_count++;
-          work_count++;
-        }
-      }
-    }
-    work_count++;
-    if ((work_count & work_count_mask_event) == 0) {
-      ABT_bool stop;
-      ABT_xstream_check_events(sched);
-      ABT_sched_has_to_stop(sched, &stop);
-      if (stop == ABT_TRUE) {
-        break;
-      }
-    }
-  }
-  free(all_pools);
+  return ABT_SUCCESS;
 }
 
-int partix_sched_free(ABT_sched sched) { return ABT_SUCCESS; }
+void create_scheds(int num, ABT_pool *pools, ABT_sched *scheds) {
+  ABT_sched_config config;
+  ABT_pool *my_pools;
+  int i, k;
+
+  ABT_sched_config_var cv_event_freq = {.idx = 0, .type = ABT_SCHED_CONFIG_INT};
+
+  ABT_sched_def sched_def = {.type = ABT_SCHED_TYPE_ULT,
+                             .init = partix_sched_init,
+                             .run = partix_sched_run,
+                             .free = partix_sched_free,
+                             .get_migr_pool = NULL};
+
+  /* Create a scheduler config */
+  debug("ABT_sched_config_create");
+  ABT_sched_config_create(&config, cv_event_freq, 10, ABT_sched_config_var_end);
+
+  my_pools = (ABT_pool *)malloc(num * sizeof(ABT_pool));
+  debug("ABT_sched_create");
+  for (i = 0; i < num; i++) {
+    for (k = 0; k < num; k++) {
+      my_pools[k] = pools[(i + k) % num];
+    }
+    ABT_sched_create(&sched_def, num, my_pools, config, &scheds[i]);
+  }
+  free(my_pools);
+  ABT_sched_config_free(&config);
+}
 
 void partix_mutex_enter() {
   debug("partix_mutex_enter");
@@ -244,12 +255,7 @@ int partix_executor_id(void) {
 
 void partix_library_init(void) {
   int ret;
-  debug("ABT_init");
-  ret = ABT_init(0, 0);
-  SUCCEED(ret);
-
-  partix_mutex_init(&global_mutex);
-  partix_mutex_init(&context_mutex);
+  ABT_init(0, NULL);
 
   int num_xstreams;
   if (getenv("ABT_NUM_XSTREAMS")) {
@@ -260,65 +266,38 @@ void partix_library_init(void) {
     num_xstreams = global_conf->num_threads;
   }
 
-  g_abt_global.num_xstreams = num_xstreams;
+  abt_global.num_xstreams = num_xstreams;
 
-  g_abt_global.xstreams =
-      (ABT_xstream *)malloc(sizeof(ABT_xstream) * num_xstreams);
-  g_abt_global.shared_pools =
-      (ABT_pool *)malloc(sizeof(ABT_pool) * num_xstreams);
-  g_abt_global.private_pools =
-      (ABT_pool *)malloc(sizeof(ABT_pool) * num_xstreams);
-  g_abt_global.schedulers =
-      (ABT_sched *)malloc(sizeof(ABT_sched) * num_xstreams);
-  ret = ABT_xstream_barrier_create(num_xstreams, &g_abt_global.xstream_barrier);
-  SUCCEED(ret);
-  /* Create pools. */
+  abt_global.xstreams =
+      (ABT_xstream *)malloc(num_xstreams * sizeof(ABT_xstream));
+  abt_global.scheds = (ABT_sched *)malloc(num_xstreams * sizeof(ABT_sched));
+  abt_global.pools = (ABT_pool *)malloc(num_xstreams * sizeof(ABT_pool));
+  abt_global.threads = (ABT_thread *)malloc(num_xstreams * sizeof(ABT_thread));
+
+  /* Create pools */
+  debug("ABT_pool_create_basic");
   for (int i = 0; i < num_xstreams; i++) {
-    debug("ABT_pool_create_basic, shared");
     ret = ABT_pool_create_basic(ABT_POOL_FIFO, ABT_POOL_ACCESS_MPMC, ABT_TRUE,
-                                &g_abt_global.shared_pools[i]);
-    SUCCEED(ret);
-    debug("ABT_pool_create_basic, private");
-    ret = ABT_pool_create_basic(ABT_POOL_FIFO, ABT_POOL_ACCESS_MPMC, ABT_TRUE,
-                                &g_abt_global.private_pools[i]);
+                                &abt_global.pools[i]);
     SUCCEED(ret);
   }
-  /* Create schedulers. */
-  ABT_sched_def sched_def = {
-      .type = ABT_SCHED_TYPE_ULT,
-      .init = partix_sched_init,
-      .run = partix_sched_run,
-      .free = partix_sched_free,
-      .get_migr_pool = NULL,
-  };
-  for (int i = 0; i < num_xstreams; i++) {
-    ABT_pool *tmp = (ABT_pool *)malloc(sizeof(ABT_pool) * num_xstreams + 1);
-    int pool_index = 0;
-    tmp[pool_index++] = g_abt_global.shared_pools[i];
-    tmp[pool_index++] = g_abt_global.private_pools[i];
-    for (int j = 1; j < num_xstreams; j++) {
-      tmp[pool_index++] = g_abt_global.shared_pools[(i + j) % num_xstreams];
-    }
 
-    debug("ABT_sched_create");
-    ret = ABT_sched_create(&sched_def, num_xstreams + 1, tmp,
-                           ABT_SCHED_CONFIG_NULL, &g_abt_global.schedulers[i]);
-    SUCCEED(ret);
-    free(tmp);
-  }
+  /* Create schedulers */
+  create_scheds(num_xstreams, abt_global.pools, abt_global.scheds);
 
-  /* Create secondary execution streams. */
+  /* Create ESs */
+
+  debug("ABT_xstream_create");
   for (int i = 1; i < num_xstreams; i++) {
-    ret = ABT_xstream_create(g_abt_global.schedulers[i],
-                             &g_abt_global.xstreams[i]);
+    ret = ABT_xstream_create(abt_global.scheds[i], &abt_global.xstreams[i]);
     SUCCEED(ret);
   }
 
   /* Set up a primary execution stream. */
-  ret = ABT_xstream_self(&g_abt_global.xstreams[0]);
+  ret = ABT_xstream_self(&abt_global.xstreams[0]);
   SUCCEED(ret);
-  ret = ABT_xstream_set_main_sched(g_abt_global.xstreams[0],
-                                   g_abt_global.schedulers[0]);
+  ret =
+      ABT_xstream_set_main_sched(abt_global.xstreams[0], abt_global.scheds[0]);
   SUCCEED(ret);
 
   /* Execute a scheduler once. */
@@ -329,37 +308,25 @@ void partix_library_init(void) {
 
 void partix_library_finalize(void) {
   int ret;
-  /* Join secondary execution streams. */
-  for (int i = 1; i < g_abt_global.num_xstreams; i++) {
-    ret = ABT_xstream_join(g_abt_global.xstreams[i]);
-    SUCCEED(ret);
-    ret = ABT_xstream_free(&g_abt_global.xstreams[i]);
-    SUCCEED(ret);
-  }
-  /* Free secondary execution streams' schedulers */
-  for (int i = 1; i < g_abt_global.num_xstreams; i++) {
-    ret = ABT_sched_free(&g_abt_global.schedulers[i]);
-    SUCCEED(ret);
-  }
 
-  debug("ABT_xstream_barrier_free");
-  ret = ABT_xstream_barrier_free(&g_abt_global.xstream_barrier);
-  SUCCEED(ret);
+  debug("ABT_xstream_join");
+  for (int i = 1; i < abt_global.num_xstreams; i++) {
+    ABT_xstream_join(abt_global.xstreams[i]);
+    ABT_xstream_free(&abt_global.xstreams[i]);
+  }
 
   partix_mutex_destroy(&global_mutex);
   partix_mutex_destroy(&context_mutex);
 
+  debug("ABT_sched_free");
+  for (int i = 1; i < abt_global.num_xstreams; i++) {
+    ret = ABT_sched_free(&abt_global.scheds[i]);
+    SUCCEED(ret);
+  }
+
   debug("ABT_finalize");
   ret = ABT_finalize();
   SUCCEED(ret);
-  free(g_abt_global.xstreams);
-  g_abt_global.xstreams = NULL;
-  free(g_abt_global.shared_pools);
-  g_abt_global.shared_pools = NULL;
-  free(g_abt_global.private_pools);
-  g_abt_global.private_pools = NULL;
-  free(g_abt_global.schedulers);
-  g_abt_global.schedulers = NULL;
 }
 
 void partix_thread_create(void (*f)(partix_task_args_t *), void *args,
@@ -368,7 +335,7 @@ void partix_thread_create(void (*f)(partix_task_args_t *), void *args,
   debug("ABT_self_get_xstream_rank");
   ret = ABT_self_get_xstream_rank(&rank);
   SUCCEED(ret);
-  ABT_pool pool = g_abt_global.shared_pools[rank];
+  ABT_pool pool = abt_global.pools[rank];
   debug("ABT_thread_create");
   ret = ABT_thread_create(pool, (void (*)(void *))f, args, ABT_THREAD_ATTR_NULL,
                           handle);
