@@ -15,6 +15,7 @@
 #define __PARTIX_H__
 
 #include <stdlib.h>
+#include <assert.h>
 
 /* Number of workers in ULT libraries and OpenMP */
 #define NUM_THREADS_DEFAULT 2
@@ -31,7 +32,10 @@
 #define PARTLENGTH_DEFAULT 16
 
 /* Used to simulate computation and communication overlap */
-#define OVERLAP_IN_MSEC_DEFAULT 0
+#define OVERLAP_IN_MSEC_DEFAULT 100
+
+/* Used add task duration divergence as a % of OVERLAP_IN_MSEC_DEFAULT */
+#define NOISE_IN_PERCENTAGE_OF_OVERLAP 0
 
 #include <thread.h>
 
@@ -44,8 +48,11 @@ void partix_init(int argc, char **argv, partix_config_t *conf) {
   conf->num_threads = argc > 2 ? atoi(argv[2]) : NUM_THREADS_DEFAULT;
   conf->num_partitions = argc > 3 ? atoi(argv[3]) : PARTITIONS_DEFAULT;
   conf->num_partlength = argc > 4 ? atoi(argv[4]) : PARTLENGTH_DEFAULT;
-  conf->overlap = argc > 5 ? atoi(argv[5]) : OVERLAP_IN_MSEC_DEFAULT;
-  conf->add_noise = partix_noise_off;
+  conf->overlap_duration = argc > 5 ? atoi(argv[5]) : OVERLAP_IN_MSEC_DEFAULT;
+  conf->noise = argc > 6 ? atoi(argv[6]) : NOISE_IN_PERCENTAGE_OF_OVERLAP;
+  
+  assert(conf->num_partitions>=conf->num_tasks);
+  assert(conf->num_partlength>0);
 
   /* conf object duration should be valid until partix_finalize() */
   global_conf = conf;
