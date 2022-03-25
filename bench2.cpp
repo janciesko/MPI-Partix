@@ -19,9 +19,9 @@
 
 #define DEFAULT_ITERS 5
 #define DATA_TYPE MPI_DOUBLE
-//#define USE_PARRIVED
+#define USE_PARRIVED
 
-/*Currenly we support only ratios of 2*/
+//#define ALL_TASKS_SLEEP
 #define DEFAULT_RECV_SEND_PARTITION_RATIO 1
 
 double timer[3] = {0.0, 0.0, 0.0};
@@ -63,12 +63,16 @@ void recv_task(partix_task_args_t *args) {
 void send_task(partix_task_args_t *args) {
   send_task_args_t *task_args = (send_task_args_t *)args->user_task_args;
 
-  // first partition completion is delayed by
-  if (task_args->partition_id == 0) {
-    size_t sleep_time_ms = global_conf->overlap;
+  //First partition completion is delayed by sleep_time_ms
+  #ifdef ALL_TASKS_SLEEP
+    size_t sleep_time_ms = global_conf->overlap_duration;
     usleep(sleep_time_ms * 1000);
-  }
-
+  #else
+    if (task_args->partition_id == 0) {
+      size_t sleep_time_ms = global_conf->overlap_duration;
+      usleep(sleep_time_ms * 1000);
+    }
+  #endif
   MPI_Pready(task_args->partition_id, *task_args->request);
 }
 
@@ -206,17 +210,21 @@ int main(int argc, char *argv[]) {
 
   if (myrank == 0) {
     double send_BW = total_size_bytes / timer[0] / 1024 / 1024;
-#if false
-    printf("%i, %i, %i, %.2f, %.2f, %.2f, %.2f\n", conf.num_tasks, conf.num_threads,
-        conf.num_partitions, ((double)patition_size_bytes)/1024, ((double)total_size_bytes)/1024,
+#if true
+    printf("%i, %i, %i, %.2f, %.2f, %.2f, %.2f\n", conf.num_tasks,
+         conf.num_threads, conf.num_partitions, 
+         ((double)patition_size_bytes)/1024, 
+         ((double)total_size_bytes)/1024,
         timer[0] /*rank0*/, send_BW);
 #endif
   } else {
+    #if false
     double recv_BW = total_size_bytes / timer[1] / 1024 / 1024;
     printf("%i, %i, %i, %.2f, %.2f, %.2f, %.2f\n", conf.num_tasks,
            conf.num_threads, conf.num_partitions,
            ((double)patition_size_bytes) / 1024,
            ((double)total_size_bytes) / 1024, timer[1] /*rank1*/, recv_BW);
+    #endif
   }
 
   MPI_Finalize();
