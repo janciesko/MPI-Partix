@@ -257,6 +257,9 @@ void partix_library_init(void) {
   int ret;
   ABT_init(0, NULL);
 
+  partix_mutex_init(&global_mutex);
+  partix_mutex_init(&context_mutex);
+
   int num_xstreams;
   if (getenv("ABT_NUM_XSTREAMS")) {
     num_xstreams = atoi(getenv("ABT_NUM_XSTREAMS"));
@@ -323,6 +326,11 @@ void partix_library_finalize(void) {
     ret = ABT_sched_free(&abt_global.scheds[i]);
     SUCCEED(ret);
   }
+
+  free(abt_global.xstreams);
+  free(abt_global.scheds);
+  free(abt_global.pools);
+  free(abt_global.threads);
 
   debug("ABT_finalize");
   ret = ABT_finalize();
