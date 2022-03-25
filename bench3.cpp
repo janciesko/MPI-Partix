@@ -69,7 +69,10 @@ void send_task(partix_task_args_t *args) {
     usleep(sleep_time_ms * 1000);
   #else
     sleep_time_ms = (float) global_conf->overlap_duration;
-    sleep_time_ms = (int)sleep_time_ms * (float(rand() % 100 + 1) / 100) * (float)global_conf->noise ;
+    
+    //Sleep a random time in the noise_spread range of the overlap duration
+    float sleep_time_ms_range = (float) sleep_time_ms * (float) global_conf->noise_spread / 100.0; 
+    sleep_time_ms = (int)(((rand() % 100 + 1) / 100.0) * sleep_time_ms_range);
     usleep(sleep_time_ms * 1000);
   #endif
 

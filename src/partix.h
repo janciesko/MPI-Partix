@@ -49,7 +49,7 @@ void partix_init(int argc, char **argv, partix_config_t *conf) {
   conf->num_partitions = argc > 3 ? atoi(argv[3]) : PARTITIONS_DEFAULT;
   conf->num_partlength = argc > 4 ? atoi(argv[4]) : PARTLENGTH_DEFAULT;
   conf->overlap_duration = argc > 5 ? atoi(argv[5]) : OVERLAP_IN_MSEC_DEFAULT;
-  conf->noise = argc > 6 ? atoi(argv[6]) : NOISE_IN_PERCENTAGE_OF_OVERLAP;
+  conf->noise_spread = argc > 6 ? atoi(argv[6]) : NOISE_IN_PERCENTAGE_OF_OVERLAP;
   
   assert(conf->num_partitions>=conf->num_tasks);
   assert(conf->num_partlength>0);

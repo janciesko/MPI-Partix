@@ -22,7 +22,7 @@ typedef struct {
   int num_partitions;
   int num_partlength;
   int overlap_duration;
-  int noise;
+  int noise_spread;
   int argc;
   char ** argv;
 } partix_config_t;
