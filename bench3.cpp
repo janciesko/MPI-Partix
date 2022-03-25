@@ -21,6 +21,8 @@
 #define DATA_TYPE MPI_DOUBLE
 #define USE_PARRIVED
 
+//#define ALL_TASKS_SLEEP_SAME_AMMOUNT
+
 #define DEFAULT_RECV_SEND_PARTITION_RATIO 1
 
 double timer[3] = {0.0, 0.0, 0.0};
@@ -63,18 +65,18 @@ void send_task(partix_task_args_t *args) {
   send_task_args_t *task_args = (send_task_args_t *)args->user_task_args;
 
   size_t sleep_time_ms;
-
-  #ifdef ALL_TASKS_SLEEP
-    sleep_time_ms = global_conf->overlap_duration;
-    usleep(sleep_time_ms * 1000);
-  #else
-    sleep_time_ms = (float) global_conf->overlap_duration;
-    
-    //Sleep a random time in the noise_spread range of the overlap duration
-    float sleep_time_ms_range = (float) sleep_time_ms * (float) global_conf->noise_spread / 100.0; 
+  sleep_time_ms = global_conf->overlap_duration;
+#ifdef ALL_TASKS_SLEEP_SAME_AMMOUNT
+  usleep(sleep_time_ms * 1000);
+#else
+  if (task_args->partition_id != 0) {
+    // Sleep a random time in the noise_spread range of the overlap duration
+    float sleep_time_ms_range =
+        (float)sleep_time_ms * (float)global_conf->noise_spread / 100.0;
     sleep_time_ms = (int)(((rand() % 100 + 1) / 100.0) * sleep_time_ms_range);
-    usleep(sleep_time_ms * 1000);
-  #endif
+  }
+  usleep(sleep_time_ms * 1000);
+#endif
 
   MPI_Pready(task_args->partition_id, *task_args->request);
 }
@@ -214,20 +216,26 @@ int main(int argc, char *argv[]) {
   if (myrank == 0) {
     double send_BW = total_size_bytes / timer[0] / 1024 / 1024;
 #if true
-    printf("%i, %i, %i, %.2f, %.2f, %.2f, %.2f\n", conf.num_tasks,
-         conf.num_threads, conf.num_partitions, 
-         ((double)patition_size_bytes)/1024, 
-         ((double)total_size_bytes)/1024,
-        timer[0] /*rank0*/, send_BW);
+    printf("%i, %i, %i, %.1f, %.2f, %.2f, %.2f, %.2f\n", conf.num_tasks,
+           conf.num_threads,
+           conf.num_partitions,
+           (float)global_conf->overlap_duration,
+           ((double)patition_size_bytes) / 1024,
+           ((double)total_size_bytes) / 1024, timer[0] /*rank0*/, send_BW);
 #endif
   } else {
-    #if false
+#if false
     double recv_BW = total_size_bytes / timer[1] / 1024 / 1024;
-    printf("%i, %i, %i, %.2f, %.2f, %.2f, %.2f\n", conf.num_tasks,
-           conf.num_threads, conf.num_partitions,
-           ((double)patition_size_bytes) / 1024,
-           ((double)total_size_bytes) / 1024, timer[1] /*rank1*/, recv_BW);
-    #endif
+    printf("%i, %i, %i, %.1f, %.2f, %.2f, %.2f, %.2f\n", 
+          conf.num_tasks,
+          conf.num_threads,
+          conf.num_partitions,
+          (float)global_conf->overlap_duration,
+          ((double)patition_size_bytes) / 1024,
+          ((double)total_size_bytes) / 1024,
+          timer[1] /*rank1*/,
+          recv_BW);
+#endif
   }
 
   MPI_Finalize();

@@ -23,24 +23,37 @@ export QTHREAD_STACK_SIZE=8192
 export OMP_PROC_BIND=true
 export OMP_PLACES=cores
 
+overlap_default=0 #msec
+
 FLAGS="--bind-to core --rank-by core"
 PRELOAD="-x LD_PRELOAD=/home/projects/x86-64/gcc/10.2.0/lib64/libstdc++.so.6"
 
 # Optionally use ob1 
 USE_MCA_OB1="OMPI_MCA_pml=ob1"
 
-echo "tasks,threads,partitions,partsize(KB),totalsize(KB),time,bw(MB)"
-for t in {1..9..1}; do 
+echo "tasks,threads,partitions,overlap,partsize(KB),totalsize(KB),time,bw(MB)"
+#Run over threads
+for threads in {1..9..1}; do 
   total_partlen_elems=$total_partlen_elems_start
+  #Run over buffer size
   for size in {1..18..1}; do 
     let num_partlen=$total_partlen_elems/$num_tasks
-     #echo "mpirun --map-by ppr:1:node --host $hosts $FLAGS $PRELOAD -x OMP_PLACES=cores -x OMP_NUM_THREADS=$num_threads -x \
-     #QTHREAD_STACK_SIZE=8196 -x OMP_PROC_BIND=true $binary $num_tasks $num_threads $num_part $num_partlen"
-     mpirun -x $USE_MCA_OB1 --map-by ppr:1:node --host $hosts \
+    #Run over overlap duraton
+    overlp=$overlap_default
+    for overlap in {1..5..1}; do 
+      let num_partlen=$total_partlen_elems/$num_tasks
+      mpirun -x $USE_MCA_OB1 --map-by ppr:1:node --host $hosts \
       $FLAGS $PRELOAD -x OMP_PLACES=cores -x OMP_NUM_THREADS=$num_threads \
       -x QTHREAD_STACK_SIZE=8196  -x OMP_PROC_BIND=true \
-      $binary $num_tasks $num_threads $num_part $num_partlen
+      $binary $num_tasks $num_threads $num_part $num_partlen $overlp
+      if [[ $overlp -eq 0 ]] 
+      then
+        overlp=10
+      fi
+      let overlp=$overlp*2
+    done
     let total_partlen_elems=$total_partlen_elems*2
+    
   done
   let num_tasks=$num_tasks*2
   num_threads=$num_tasks

@@ -35,7 +35,7 @@
 #define OVERLAP_IN_MSEC_DEFAULT 100
 
 /* Used add task duration divergence as a % of OVERLAP_IN_MSEC_DEFAULT */
-#define NOISE_IN_PERCENTAGE_OF_OVERLAP 0
+#define NOISE_IN_PERCENTAGE_OF_OVERLAP 100
 
 #include <thread.h>
 
