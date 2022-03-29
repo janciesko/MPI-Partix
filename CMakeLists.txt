@@ -91,7 +91,7 @@ target_compile_definitions(${BACKEND_NAME} PUBLIC "DEBUG")
 message(STATUS "Building with DEBUG=ON")
 endif()
 
-set(SOURCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
+set(SOURCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/apps")
 set(HEADERS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/threading")
 list(APPEND HEADERS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
