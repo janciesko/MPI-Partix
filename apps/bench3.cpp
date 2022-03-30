@@ -11,6 +11,10 @@
 //@HEADER
 */
 
+/*
+  Similar to bench2 but delays n-1 tasks by a random ammount of time
+*/
+
 #include "mpi.h"
 #include <cstdio>
 #include <partix.h>
@@ -207,6 +211,11 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  // Measure perceived BW, that is communication as it were in the critical 
+  // path, by subtracting overlap
+  timer[0] -= iterations * (float)global_conf->overlap_duration / 1000;
+  timer[1] -= iterations * (float)global_conf->overlap_duration / 1000;
+
   timer[0] /= iterations;
   timer[1] /= iterations;
 
@@ -216,21 +225,21 @@ int main(int argc, char *argv[]) {
   if (myrank == 0) {
     double send_BW = total_size_bytes / timer[0] / 1024 / 1024;
 #if true
-    printf("%i, %i, %i, %.1f, %.2f, %.2f, %.2f, %.2f\n", conf.num_tasks,
+    printf("%i, %i, %i, %.3f, %.2f, %.2f, %.2f, %.2f\n", conf.num_tasks,
            conf.num_threads,
            conf.num_partitions,
-           (float)global_conf->overlap_duration,
+           (float)global_conf->overlap_duration / 1000.0,
            ((double)patition_size_bytes) / 1024,
            ((double)total_size_bytes) / 1024, timer[0] /*rank0*/, send_BW);
 #endif
   } else {
 #if false
     double recv_BW = total_size_bytes / timer[1] / 1024 / 1024;
-    printf("%i, %i, %i, %.1f, %.2f, %.2f, %.2f, %.2f\n", 
+    printf("%i, %i, %i, %.3f, %.2f, %.2f, %.2f, %.2f\n", 
           conf.num_tasks,
           conf.num_threads,
           conf.num_partitions,
-          (float)global_conf->overlap_duration,
+          (float)global_conf->overlap_duration / 1000.0,
           ((double)patition_size_bytes) / 1024,
           ((double)total_size_bytes) / 1024,
           timer[1] /*rank1*/,

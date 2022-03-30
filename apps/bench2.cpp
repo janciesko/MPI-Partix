@@ -11,17 +11,21 @@
 //@HEADER
 */
 
+/*
+  Similar to bench1 but delays n-1 tasks by an equal ammount of time
+*/
+
 #include "mpi.h"
 #include <cstdio>
 #include <partix.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-#define DEFAULT_ITERS 5
+#define DEFAULT_ITERS 10
 #define DATA_TYPE MPI_DOUBLE
 #define USE_PARRIVED
 
-#define ALL_TASKS_SLEEP
+//#define ALL_TASKS_SLEEP_SAME_AMMOUNT
 #define DEFAULT_RECV_SEND_PARTITION_RATIO 1
 
 double timer[3] = {0.0, 0.0, 0.0};
@@ -64,15 +68,15 @@ void send_task(partix_task_args_t *args) {
   send_task_args_t *task_args = (send_task_args_t *)args->user_task_args;
 
 // First partition completion is delayed by sleep_time_ms
-#ifdef ALL_TASKS_SLEEP
-  size_t sleep_time_ms = global_conf->overlap_duration;
-  usleep(sleep_time_ms * 1000);
+size_t sleep_time_ms = 0;
+#ifdef ALL_TASKS_SLEEP_SAME_AMMOUNT
+  sleep_time_ms = global_conf->overlap_duration;
 #else
   if (task_args->partition_id == 0) {
-    size_t sleep_time_ms = global_conf->overlap_duration;
-    usleep(sleep_time_ms * 1000);
+    sleep_time_ms = global_conf->overlap_duration;
   }
 #endif
+  usleep(sleep_time_ms * 1000);
   MPI_Pready(task_args->partition_id, *task_args->request);
 }
 
@@ -202,6 +206,11 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  // Measure perceived BW, that is communication as it were in the critical 
+  // path, by subtracting overlap
+  timer[0] -= iterations * (float)global_conf->overlap_duration / 1000;
+  timer[1] -= iterations * (float)global_conf->overlap_duration / 1000;
+
   timer[0] /= iterations;
   timer[1] /= iterations;
 
@@ -211,22 +220,22 @@ int main(int argc, char *argv[]) {
   if (myrank == 0) {
     double send_BW = total_size_bytes / timer[0] / 1024 / 1024;
 #if true
-    printf("%i, %i, %i, %.1f, %.2f, %.2f, %.2f, %.2f\n",
+    printf("%i, %i, %i, %.3f, %.2f, %.2f, %.2f, %.2f\n",
            conf.num_tasks,
            conf.num_threads, 
            conf.num_partitions,
-           (float)global_conf->overlap_duration,
+           (float)global_conf->overlap_duration / 1000.0,
            ((double)patition_size_bytes) / 1024,
            ((double)total_size_bytes) / 1024, timer[0] /*rank0*/, send_BW);
 #endif
   } else {
 #if false
     double recv_BW = total_size_bytes / timer[1] / 1024 / 1024;
-    printf("%i, %i, %i, %.1f, %.2f, %.2f, %.2f, %.2f\n", 
+    printf("%i, %i, %i, %.3f, %.2f, %.2f, %.2f, %.2f\n", 
           conf.num_tasks,
           conf.num_threads,
           conf.num_partitions,
-          (float)global_conf->overlap_duration,
+          (float)global_conf->overlap_duration / 1000.0,
           ((double)patition_size_bytes) / 1024,
           ((double)total_size_bytes) / 1024,
           timer[1] /*rank1*/,

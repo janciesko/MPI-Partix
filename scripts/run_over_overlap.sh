@@ -23,7 +23,7 @@ export QTHREAD_STACK_SIZE=8192
 export OMP_PROC_BIND=true
 export OMP_PLACES=cores
 
-overlap_default=0 #msec
+overlap_default=1 #msec
 
 FLAGS="--bind-to core --rank-by core"
 PRELOAD="-x LD_PRELOAD=/home/projects/x86-64/gcc/10.2.0/lib64/libstdc++.so.6"
@@ -46,7 +46,7 @@ for threads in {1..9..1}; do
       $FLAGS $PRELOAD -x OMP_PLACES=cores -x OMP_NUM_THREADS=$num_threads \
       -x QTHREAD_STACK_SIZE=8196  -x OMP_PROC_BIND=true \
       $binary $num_tasks $num_threads $num_part $num_partlen $overlp
-      if [[ $overlp -eq 0 ]] 
+      if [[ $overlp -eq 1 ]] 
       then
         overlp=10
       fi

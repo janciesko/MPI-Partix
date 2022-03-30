@@ -197,7 +197,7 @@ int main(int argc, char *argv[]) {
 
   if (myrank == 0) {
     double send_BW = total_size_bytes / timer[0] / 1024 / 1024;
-#if false
+#if true
     printf("%i, %i, %i, %.2f, %.2f, %.2f, %.2f\n", 
           conf.num_tasks,
           conf.num_threads,
@@ -208,6 +208,7 @@ int main(int argc, char *argv[]) {
           send_BW);
 #endif
   } else {
+#if false
     double recv_BW = total_size_bytes / timer[1] / 1024 / 1024;
     printf("%i, %i, %i, %.2f, %.2f, %.2f, %.2f\n", 
            conf.num_tasks,
@@ -215,6 +216,7 @@ int main(int argc, char *argv[]) {
            conf.num_partitions,
            ((double)patition_size_bytes) / 1024,
            ((double)total_size_bytes) / 1024, timer[1] /*rank1*/, recv_BW);
+#endif
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
