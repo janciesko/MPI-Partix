@@ -40,7 +40,7 @@ for threads in {1..9..1}; do
     let num_partlen=$total_partlen_elems/$num_tasks
     #Run over overlap duraton
     overlp=$overlap_default
-    for overlap in {1..5..1}; do 
+    for overlap in {1..8..1}; do 
       let num_partlen=$total_partlen_elems/$num_tasks
       mpirun -x $USE_MCA_OB1 --map-by ppr:1:node --host $hosts \
       $FLAGS $PRELOAD -x OMP_PLACES=cores -x OMP_NUM_THREADS=$num_threads \

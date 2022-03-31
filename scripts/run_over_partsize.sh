@@ -25,7 +25,6 @@ export OMP_PLACES=cores
 
 FLAGS="--bind-to core --rank-by core"
 PRELOAD="-x LD_PRELOAD=/home/projects/x86-64/gcc/10.2.0/lib64/libstdc++.so.6"
-
 # Optionally use ob1 
 USE_MCA_OB1="OMPI_MCA_pml=ob1"
 
