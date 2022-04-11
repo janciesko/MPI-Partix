@@ -1,17 +1,5 @@
 /*
-//@HEADER
-// ************************************************************************
-//
-//                        Partix 1.0
-//              Copyright Type Date and Name (2022)
-//
-// Questions? Contact Jan Ciesko (jciesko@sandia.gov)
-//
-// ************************************************************************
-//@HEADER
-*/
-
-/*
+  Description:
   Similar to bench3 but uses MPI_Isend and MPI_Irecv
 */
 

@@ -1,16 +1,3 @@
-/*
-//@HEADER
-// ************************************************************************
-//
-//                        Partix 1.0
-//              Copyright Type Date and Name (2022)
-//
-// Questions? Contact Jan Ciesko (jciesko@sandia.gov)
-//
-// ************************************************************************
-//@HEADER
-*/
-
 #include <stdlib.h>
 #include <thread.h>
 

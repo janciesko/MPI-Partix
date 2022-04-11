@@ -1,17 +1,5 @@
 /*
-//@HEADER
-// ************************************************************************
-//
-//                        Partix 1.0
-//              Copyright Type Date and Name (2022)
-//
-// Questions? Contact Jan Ciesko (jciesko@sandia.gov)
-//
-// ************************************************************************
-//@HEADER
-*/
-
-/*
+  Description:
   Similar to bench2 but delays n-1 tasks by a random ammount of time
 */
 
