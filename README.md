@@ -24,7 +24,7 @@ Several run scripts are included for reproducibility. Executing the included run
 It can be seen that different threading implementations result in different performances. This especially applies to executions where performance is determined mainly by access latency. Further, higher degrees of concurrency (line color) show performance degradation. This is subject to optimizations of partitioned communication in the MPI runtime.
 
 ### Execution Scenarios
-Partitioned communication helps to achieve an overlap in computation and communication and partitioning data transfers and allowing the underlying MPI runtime to consolidate actual transfers. Several overlap scenarios exist which are shown below. Currently, the tested MPI implementation was not able to achieve significant performance improvements in either case. Achieving higher performance in these cases is again subject to further development work.
+Partitioned communication helps to achieve overlapping computation and communication through partitioning data and by allowing the MPI runtime to consolidate actual transfers as partitioned are marked ready in the user's code. Several overlap scenarios exist which are shown below. Currently, the tested MPI implementation was not able to achieve significant performance improvements in either case. Achieving higher performance in these cases is again subject to further development work.
 <img src=https://user-images.githubusercontent.com/755191/162831220-059980e3-f26a-4a9a-a9cd-f63ecab7a430.png width=90%>
 <img src=https://user-images.githubusercontent.com/755191/162831247-77b473e1-8d47-4d23-9339-08dfbaf10366.png width=55%>
 
