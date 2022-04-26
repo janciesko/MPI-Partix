@@ -71,7 +71,7 @@
 
 extern partix_config_t *global_conf;
 
-void partix_init(int argc, char **argv, partix_config_t *conf) {
+static void partix_init(int argc, char **argv, partix_config_t *conf) {
   conf->num_tasks = argc > 1 ? atoi(argv[1]) : NUM_TASKS_DEFAULT;
   conf->num_threads = argc > 2 ? atoi(argv[2]) : NUM_THREADS_DEFAULT;
   conf->num_partitions = argc > 3 ? atoi(argv[3]) : PARTITIONS_DEFAULT;
@@ -90,7 +90,7 @@ void partix_init(int argc, char **argv, partix_config_t *conf) {
   conf->argv = argv;
 }
 
-void partix_finalize() { ; /* Empty. */ }
+static void partix_finalize() { ; /* Empty. */ }
 
 void partix_add_noise() { ;/*Unused*/ }
 
